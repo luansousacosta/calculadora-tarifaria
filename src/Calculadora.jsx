@@ -404,6 +404,7 @@ export default function Calculadora() {
                     onChange={(e) => setConsumo(e.target.value)}
                     placeholder="Ex.: 500"
                     unit="kWh"
+                    inputMode="decimal"
                   />
                 </Field>
                 <Field label="Tipo de ligação">
@@ -433,6 +434,7 @@ export default function Calculadora() {
                     onChange={(e) => setCip(e.target.value)}
                     placeholder="Ex.: 35,00"
                     unit="R$/mês"
+                    inputMode="decimal"
                   />
                 </Field>
               </div>
@@ -448,16 +450,17 @@ export default function Calculadora() {
               {showAdv && (
                 <div className="mt-3 grid gap-4 rounded-xl bg-royal-50/60 p-4 sm:grid-cols-2">
                   <Field label="Geração média (kWh/kWp·mês)" hint="RN ≈ 130">
-                    <Input value={geracao} onChange={(e) => setGeracao(e.target.value)} />
+                    <Input value={geracao} onChange={(e) => setGeracao(e.target.value)} inputMode="decimal" />
                   </Field>
                   <Field label="Autoconsumo — solar (%)" hint="Energia usada na hora">
-                    <Input value={autoSolar} onChange={(e) => setAutoSolar(e.target.value)} unit="%" />
+                    <Input value={autoSolar} onChange={(e) => setAutoSolar(e.target.value)} unit="%" inputMode="decimal" />
                   </Field>
                   <Field label="Autoconsumo — híbrido (%)" hint="Maior com bateria">
                     <Input
                       value={autoHibrido}
                       onChange={(e) => setAutoHibrido(e.target.value)}
                       unit="%"
+                      inputMode="decimal"
                     />
                   </Field>
                   <Field label="Desconto assinatura (%)" hint="Sobre o economizável">
@@ -465,6 +468,7 @@ export default function Calculadora() {
                       value={descAssinatura}
                       onChange={(e) => setDescAssinatura(e.target.value)}
                       unit="%"
+                      inputMode="decimal"
                     />
                   </Field>
                 </div>
@@ -644,27 +648,56 @@ export default function Calculadora() {
 
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             <Field label="Nome completo *">
-              <Input value={cliente} onChange={(e) => setCliente(e.target.value)} placeholder="Seu nome" />
+              <Input
+                type="text"
+                inputMode="text"
+                autoCapitalize="words"
+                value={cliente}
+                onChange={(e) => setCliente(e.target.value)}
+                placeholder="Seu nome"
+              />
             </Field>
             <Field label="WhatsApp *">
               <Input
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
                 value={whatsapp}
                 onChange={(e) => setWhatsapp(e.target.value)}
                 placeholder="(84) 9 9999-9999"
               />
             </Field>
             <Field label="E-mail *">
-              <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@email.com" />
+              <Input
+                type="email"
+                inputMode="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="voce@email.com"
+              />
             </Field>
             <Field label="Endereço">
               <Input
+                type="text"
+                inputMode="text"
+                autoCapitalize="words"
                 value={endereco}
                 onChange={(e) => setEndereco(e.target.value)}
                 placeholder="Rua, número, bairro"
               />
             </Field>
             <Field label="Cidade">
-              <Input value={cidade} onChange={(e) => setCidade(e.target.value)} placeholder="Natal/RN" />
+              <Input
+                type="text"
+                inputMode="text"
+                autoCapitalize="words"
+                value={cidade}
+                onChange={(e) => setCidade(e.target.value)}
+                placeholder="Natal/RN"
+              />
             </Field>
           </div>
 
@@ -1237,9 +1270,10 @@ function Input({ unit, ...props }) {
   return (
     <div className="relative">
       <input
-        inputMode="decimal"
         {...props}
-        className="w-full rounded-xl border border-royal-200 bg-white px-3 py-2.5 pr-16 text-sm font-medium text-royal-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+        className={`w-full rounded-xl border border-royal-200 bg-white px-3 py-2.5 ${
+          unit ? "pr-16" : "pr-3"
+        } text-sm font-medium text-royal-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20`}
       />
       {unit && (
         <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-royal-400">
