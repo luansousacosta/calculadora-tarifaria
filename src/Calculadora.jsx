@@ -12,6 +12,12 @@ import {
   TrendingDown,
   Wallet,
   SlidersHorizontal,
+  FileText,
+  MessageCircle,
+  Check,
+  Phone,
+  Mail,
+  MapPin,
 } from "lucide-react";
 
 /* ================================================================== *
@@ -60,6 +66,25 @@ const PRECO_FV = [
 ];
 const HIBRIDO_MULT = 1.85; // solar + bateria = +85% sobre o solar
 
+// Contato / empresa (para a proposta e captação de leads)
+const EMPRESA = {
+  nome: "Sousa Costa Energia",
+  cnpj: "48.725.763/0001-26",
+  whatsapp: "558491388651", // DDI+DDD, só números
+  whatsappExibicao: "(84) 9138-8651",
+  email: "contato@sousacosta.com.br",
+  site: "www.sousacosta.com.br",
+  endereco: "Rua Vitória, 17, Amarante — São Gonçalo do Amarante/RN",
+};
+// Webhook de captação (mesmo fluxo n8n → Reonic do site) — best-effort
+const N8N_WEBHOOK = "https://sousacosta.app.n8n.cloud/webhook/lead-site";
+const MODULO_W = 620; // potência do módulo p/ estimar nº de placas
+const VALIDADE_DIAS = 15;
+
+const so = (v) => String(v || "").replace(/\D/g, ""); // só dígitos
+const waLink = (msg) =>
+  `https://wa.me/${EMPRESA.whatsapp}?text=${encodeURIComponent(msg)}`;
+
 /* ------------------------------------------------------------------ */
 const brl = (v) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
@@ -96,8 +121,14 @@ export default function Calculadora() {
   const [ligacao, setLigacao] = useState("MONO");
   const [bandeira, setBandeira] = useState("VERDE"); // inicia em verde
   const [cip, setCip] = useState(""); // Iluminação Pública — cliente preenche
+
+  // Dados do cliente (para a proposta / captação)
   const [cliente, setCliente] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
+  const [email, setEmail] = useState("");
+  const [endereco, setEndereco] = useState("");
   const [cidade, setCidade] = useState("");
+  const [showProposta, setShowProposta] = useState(false);
 
   // Ajustes avançados (editáveis)
   const [geracao, setGeracao] = useState("130"); // kWh/kWp/mês (RN)
@@ -173,6 +204,61 @@ export default function Calculadora() {
       assinatura,
     };
   }, [consumo, ligacao, bandeira, cip, geracao, autoSolar, autoHibrido, descAssinatura]);
+
+  const hoje = new Date().toLocaleDateString("pt-BR");
+  const validade = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + VALIDADE_DIAS);
+    return d.toLocaleDateString("pt-BR");
+  }, []);
+
+  // Captação do lead (best-effort para o fluxo n8n → Reonic, como no site)
+  const enviarLead = () => {
+    const payload = {
+      nome: cliente,
+      telefone: so(whatsapp),
+      email,
+      endereco: [endereco, cidade].filter(Boolean).join(" - "),
+      interesse: "Energia solar (calculadora)",
+      consumoKwh: r.C,
+      contaAtual: Number(r.contaCheia.toFixed(2)),
+      sistemaKwp: Number(r.kwp.toFixed(2)),
+      economiaMes: Number(r.solar.economiaMes.toFixed(2)),
+      investimento: Number(r.solar.investimento.toFixed(2)),
+      origem: "calculadora-solar",
+      consentimentoLGPD: true,
+      paginaUrl: typeof window !== "undefined" ? window.location.href : "",
+    };
+    try {
+      fetch(N8N_WEBHOOK, {
+        method: "POST",
+        mode: "no-cors",
+        keepalive: true,
+        headers: { "Content-Type": "text/plain;charset=UTF-8" },
+        body: JSON.stringify(payload),
+      }).catch(() => {});
+    } catch (e) {
+      /* best-effort — a proposta é gerada de qualquer forma */
+    }
+  };
+
+  const gerarProposta = () => {
+    enviarLead();
+    setShowProposta(true);
+    if (typeof window !== "undefined") window.scrollTo(0, 0);
+  };
+
+  if (showProposta) {
+    return (
+      <Proposta
+        r={r}
+        lead={{ cliente, whatsapp, email, endereco, cidade }}
+        hoje={hoje}
+        validade={validade}
+        onVoltar={() => setShowProposta(false)}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-royal-50/40 to-white font-sans text-royal-950">
@@ -276,13 +362,6 @@ export default function Calculadora() {
                     unit="R$/mês"
                   />
                 </Field>
-                <Field label="Cliente (opcional — para o relatório)">
-                  <Input
-                    value={cliente}
-                    onChange={(e) => setCliente(e.target.value)}
-                    placeholder="Nome do cliente"
-                  />
-                </Field>
               </div>
 
               {/* Ajustes avançados */}
@@ -314,9 +393,6 @@ export default function Calculadora() {
                       onChange={(e) => setDescAssinatura(e.target.value)}
                       unit="%"
                     />
-                  </Field>
-                  <Field label="Cidade (opcional)">
-                    <Input value={cidade} onChange={(e) => setCidade(e.target.value)} placeholder="Natal/RN" />
                   </Field>
                 </div>
               )}
@@ -484,6 +560,74 @@ export default function Calculadora() {
           </div>
         </div>
 
+        {/* CTA — Gerar proposta */}
+        <div className="mt-12 overflow-hidden rounded-2xl border border-brand-500/40 bg-gradient-to-br from-brand-500/10 to-royal-50 p-6 shadow-card sm:p-8">
+          <div className="flex items-center gap-2 text-brand-700">
+            <FileText className="h-5 w-5" />
+            <span className="text-xs font-bold uppercase tracking-widest">
+              Gerar proposta personalizada
+            </span>
+          </div>
+          <h3 className="mt-2 font-display text-xl font-bold text-royal-950">
+            Receba a proposta com o seu nome
+          </h3>
+          <p className="mt-1 text-sm text-royal-600">
+            Preencha seus dados para gerar uma proposta em PDF e falar com um especialista.
+          </p>
+
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <Field label="Nome completo">
+              <Input value={cliente} onChange={(e) => setCliente(e.target.value)} placeholder="Seu nome" />
+            </Field>
+            <Field label="WhatsApp">
+              <Input
+                value={whatsapp}
+                onChange={(e) => setWhatsapp(e.target.value)}
+                placeholder="(84) 9 9999-9999"
+              />
+            </Field>
+            <Field label="E-mail">
+              <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@email.com" />
+            </Field>
+            <Field label="Endereço">
+              <Input
+                value={endereco}
+                onChange={(e) => setEndereco(e.target.value)}
+                placeholder="Rua, número, bairro"
+              />
+            </Field>
+            <Field label="Cidade">
+              <Input value={cidade} onChange={(e) => setCidade(e.target.value)} placeholder="Natal/RN" />
+            </Field>
+          </div>
+
+          <div className="mt-2 flex flex-col gap-3 sm:flex-row">
+            <button
+              onClick={gerarProposta}
+              disabled={!(r.C > 0) || !cliente.trim()}
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-royal-600 px-5 py-3.5 font-bold text-white shadow-lg shadow-royal-600/25 transition hover:bg-royal-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <FileText className="h-5 w-5" /> Gerar proposta
+            </button>
+            <a
+              href={waLink(
+                `Olá! Sou ${cliente || "cliente"} e quero uma proposta de energia solar. ` +
+                  `Consumo ~${r.C || 0} kWh/mês. Vim pela calculadora.`
+              )}
+              target="_blank"
+              rel="noreferrer"
+              onClick={enviarLead}
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-500 px-5 py-3.5 font-bold text-royal-950 shadow-lg shadow-brand-500/30 transition hover:bg-brand-400"
+            >
+              <MessageCircle className="h-5 w-5" /> Falar no WhatsApp
+            </a>
+          </div>
+          <p className="mt-2 text-xs text-royal-400">
+            Ao continuar você concorda em ser contatado pela Sousa Costa Energia sobre esta
+            simulação (LGPD).
+          </p>
+        </div>
+
         <p className="mt-8 text-center text-xs text-royal-400">
           Sousa Costa Energia · Simulador de economia solar — Grupo B · Natal/RN
         </p>
@@ -496,6 +640,215 @@ function paybackTxt(anos) {
   if (!Number.isFinite(anos) || anos <= 0) return "—";
   if (anos < 1) return `${Math.round(anos * 12)} meses`;
   return `${anos.toFixed(1).replace(".", ",")} anos`;
+}
+
+/* ================================================================== *
+ *  PROPOSTA — documento imprimível / PDF
+ * ================================================================== */
+function Proposta({ r, lead, hoje, validade, onVoltar }) {
+  const s = r.solar;
+  const modulos = Math.max(1, Math.ceil((r.kwp * 1000) / MODULO_W));
+  const geracaoAno = r.C * 12; // sistema dimensionado para o consumo
+  const economia25 = s.economiaAno * 25 - s.investimento;
+
+  return (
+    <div className="min-h-screen bg-royal-50 font-sans text-royal-950 print:bg-white">
+      {/* Barra de ações (some na impressão) */}
+      <div className="sticky top-0 z-10 border-b border-royal-100 bg-white/90 backdrop-blur print:hidden">
+        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
+          <button
+            onClick={onVoltar}
+            className="inline-flex items-center gap-1.5 rounded-full border border-royal-200 px-4 py-2 text-sm font-semibold text-royal-700 transition hover:bg-royal-50"
+          >
+            <ArrowLeft className="h-4 w-4" /> Voltar
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="inline-flex items-center gap-1.5 rounded-full bg-royal-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-royal-700"
+          >
+            <Printer className="h-4 w-4" /> Baixar / Imprimir PDF
+          </button>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-4xl space-y-6 p-4 sm:p-8 print:max-w-none print:space-y-5 print:p-0">
+        {/* CAPA */}
+        <section className="break-inside-avoid rounded-2xl bg-gradient-to-br from-royal-700 to-royal-900 p-8 text-white shadow-card print:rounded-none">
+          <div className="flex items-center gap-3">
+            <svg viewBox="0 0 100 100" className="h-11 w-11" aria-hidden="true">
+              <rect width="100" height="100" rx="24" fill="#ffffff" />
+              <path
+                d="M68 34c-4-6-11-9-19-9-11 0-19 6-19 15 0 8 6 12 17 14 8 2 11 3 11 7 0 3-3 5-9 5-6 0-11-2-15-7l-8 9c5 7 13 10 22 10 12 0 20-6 20-16 0-8-6-12-18-15-7-2-10-3-10-6 0-3 3-5 8-5 5 0 9 2 12 6z"
+                fill="#3E4095"
+              />
+            </svg>
+            <div>
+              <p className="font-display text-lg font-extrabold leading-none">Sousa Costa Energia</p>
+              <p className="text-xs text-royal-200">Energia solar no Rio Grande do Norte</p>
+            </div>
+          </div>
+
+          <p className="mt-8 text-sm font-semibold uppercase tracking-widest text-brand-300">
+            Proposta de energia solar
+          </p>
+          <h1 className="mt-1 font-display text-3xl font-extrabold sm:text-4xl">
+            {lead.cliente || "Cliente"}
+          </h1>
+          <p className="mt-1 text-royal-200">
+            {[lead.endereco, lead.cidade].filter(Boolean).join(" · ") || "—"}
+          </p>
+
+          <div className="mt-8 grid grid-cols-2 gap-4 border-t border-white/15 pt-5 text-sm sm:grid-cols-4">
+            <CapaItem k="Emitida em" v={hoje} />
+            <CapaItem k="Válida até" v={validade} />
+            <CapaItem k="Consumo" v={`${r.C.toLocaleString("pt-BR")} kWh/mês`} />
+            <CapaItem k="Sistema" v={`${r.kwp.toFixed(1)} kWp`} />
+          </div>
+        </section>
+
+        {/* DESTAQUE ECONOMIA */}
+        <section className="grid gap-4 sm:grid-cols-3">
+          <BigStat titulo="Economia por mês" valor={brl(s.economiaMes)} destaque />
+          <BigStat titulo="Economia por ano" valor={brl(s.economiaAno)} />
+          <BigStat titulo="Economia em 25 anos" valor={brl(economia25)} />
+        </section>
+
+        {/* SUA CONTA */}
+        <section className="break-inside-avoid rounded-2xl border border-royal-100 bg-white p-6 shadow-card">
+          <h2 className="font-display text-lg font-bold text-royal-900">Sua conta de luz</h2>
+          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+            <ContaBox titulo="Hoje (sem solar)" valor={brl(r.contaCheia)} tom="cinza" />
+            <ContaBox titulo="Com energia solar" valor={brl(s.contaFinal)} tom="verde" />
+            <ContaBox titulo="Desconto na conta" valor={pct(s.descontoPct)} tom="indigo" />
+          </div>
+        </section>
+
+        {/* SISTEMA */}
+        <section className="break-inside-avoid rounded-2xl border border-royal-100 bg-white p-6 shadow-card">
+          <h2 className="font-display text-lg font-bold text-royal-900">Seu sistema fotovoltaico</h2>
+          <div className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2">
+            <LinhaSpec k="Potência estimada" v={`${r.kwp.toFixed(1)} kWp`} />
+            <LinhaSpec k="Geração estimada" v={`${geracaoAno.toLocaleString("pt-BR")} kWh/ano`} />
+            <LinhaSpec k="Módulos (aprox.)" v={`${modulos} × ${MODULO_W} W`} />
+            <LinhaSpec k="Inversor" v={`~${Math.max(1, Math.round(r.kwp))} kW`} />
+          </div>
+          <p className="mt-4 text-xs text-royal-400">
+            Quantidades e modelos são estimativas dimensionadas pelo consumo informado. A configuração
+            final é definida em visita técnica.
+          </p>
+        </section>
+
+        {/* INVESTIMENTO */}
+        <section className="break-inside-avoid rounded-2xl border border-royal-100 bg-white p-6 shadow-card">
+          <h2 className="font-display text-lg font-bold text-royal-900">Investimento e retorno</h2>
+          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+            <ContaBox titulo="Investimento" valor={brl(s.investimento)} tom="indigo" />
+            <ContaBox titulo="Retorno (payback)" valor={paybackTxt(s.paybackAnos)} tom="cinza" />
+            <ContaBox
+              titulo="Retorno ao ano"
+              valor={
+                s.investimento > 0
+                  ? pct(s.economiaAno / s.investimento)
+                  : "—"
+              }
+              tom="verde"
+            />
+          </div>
+          <ul className="mt-5 space-y-2 text-sm text-royal-600">
+            {[
+              "Redução imediata na conta de luz já nas primeiras faturas",
+              "Valorização do imóvel e energia limpa por mais de 25 anos",
+              "Projeto, instalação e homologação junto à Neoenergia Cosern",
+            ].map((t) => (
+              <li key={t} className="flex items-start gap-2">
+                <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" /> {t}
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        {/* CONTATO */}
+        <section className="break-inside-avoid rounded-2xl bg-royal-900 p-6 text-white shadow-card print:rounded-none">
+          <h2 className="font-display text-lg font-bold">Vamos conversar?</h2>
+          <p className="mt-1 text-sm text-royal-200">
+            Fale com um especialista e garanta sua condição. Proposta válida até {validade}.
+          </p>
+          <div className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
+            <ContatoItem icon={MessageCircle} v={EMPRESA.whatsappExibicao} />
+            <ContatoItem icon={Mail} v={EMPRESA.email} />
+            <ContatoItem icon={MapPin} v="São Gonçalo do Amarante/RN" />
+          </div>
+          <a
+            href={waLink(
+              `Olá! Sou ${lead.cliente || "cliente"} e recebi a proposta de energia solar ` +
+                `(${r.kwp.toFixed(1)} kWp · economia ${brl(s.economiaMes)}/mês). Quero avançar!`
+            )}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-5 py-3 font-bold text-royal-950 transition hover:bg-brand-400 print:hidden"
+          >
+            <MessageCircle className="h-5 w-5" /> Quero avançar no WhatsApp
+          </a>
+        </section>
+
+        <p className="pb-6 text-center text-xs text-royal-400">
+          {EMPRESA.nome} · CNPJ {EMPRESA.cnpj} · {EMPRESA.site} — Valores estimados com base nas
+          tarifas vigentes da Neoenergia Cosern; podem variar conforme consumo real, geração local e
+          reajustes da ANEEL.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function CapaItem({ k, v }) {
+  return (
+    <div>
+      <p className="text-xs uppercase tracking-wide text-royal-300">{k}</p>
+      <p className="mt-0.5 font-semibold">{v}</p>
+    </div>
+  );
+}
+function BigStat({ titulo, valor, destaque }) {
+  return (
+    <div
+      className={`break-inside-avoid rounded-2xl border p-5 text-center shadow-card ${
+        destaque ? "border-brand-500 bg-brand-500/10" : "border-royal-100 bg-white"
+      }`}
+    >
+      <p className="text-xs font-semibold uppercase tracking-wide text-royal-400">{titulo}</p>
+      <p className="mt-1 font-display text-2xl font-extrabold text-brand-600">{valor}</p>
+    </div>
+  );
+}
+function ContaBox({ titulo, valor, tom }) {
+  const tons = {
+    cinza: "bg-royal-50 text-royal-900",
+    verde: "bg-brand-500/10 text-brand-700",
+    indigo: "bg-royal-100 text-royal-800",
+  };
+  return (
+    <div className={`rounded-xl p-4 text-center ${tons[tom] || tons.cinza}`}>
+      <p className="text-xs font-semibold uppercase tracking-wide opacity-70">{titulo}</p>
+      <p className="mt-1 font-display text-xl font-extrabold">{valor}</p>
+    </div>
+  );
+}
+function LinhaSpec({ k, v }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3 border-b border-royal-50 py-1.5">
+      <span className="text-sm text-royal-500">{k}</span>
+      <span className="text-sm font-semibold text-royal-900">{v}</span>
+    </div>
+  );
+}
+function ContatoItem({ icon: Icon, v }) {
+  return (
+    <div className="flex items-center gap-2">
+      <Icon className="h-4 w-4 shrink-0 text-brand-300" />
+      <span>{v}</span>
+    </div>
+  );
 }
 
 /* ------------------------------------------------------------------ */
