@@ -67,12 +67,18 @@ const PRECO_FV = [
 ];
 const HIBRIDO_MULT = 1.85; // solar + bateria = +85% sobre o solar
 
+// Logos (public/) — respeitam o base do Vite
+const LOGO = import.meta.env.BASE_URL + "logo-sousa-costa.png";
+const LOGO_BRANCA = import.meta.env.BASE_URL + "logo-sousa-costa-branca.png";
+
 // Contato / empresa (para a proposta e captação de leads)
 const EMPRESA = {
   nome: "Sousa Costa Energia",
   cnpj: "48.725.763/0001-26",
   whatsapp: "558491388651", // DDI+DDD, só números
   whatsappExibicao: "(84) 9138-8651",
+  telefone: "5584991260677",
+  telefoneExibicao: "(84) 99126-0677",
   email: "contato@sousacosta.com.br",
   site: "www.sousacosta.com.br",
   endereco: "Rua Vitória, 17, Amarante — São Gonçalo do Amarante/RN",
@@ -305,19 +311,10 @@ export default function Calculadora() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
           <a
             href="https://www.sousacosta.com.br/"
-            className="flex items-center gap-2.5"
+            className="flex items-center"
             aria-label="Sousa Costa Energia"
           >
-            <svg viewBox="0 0 100 100" className="h-9 w-9" aria-hidden="true">
-              <rect width="100" height="100" rx="24" fill="#3E4095" />
-              <path
-                d="M68 34c-4-6-11-9-19-9-11 0-19 6-19 15 0 8 6 12 17 14 8 2 11 3 11 7 0 3-3 5-9 5-6 0-11-2-15-7l-8 9c5 7 13 10 22 10 12 0 20-6 20-16 0-8-6-12-18-15-7-2-10-3-10-6 0-3 3-5 8-5 5 0 9 2 12 6z"
-                fill="#9AD52A"
-              />
-            </svg>
-            <span className="font-display text-lg font-extrabold leading-none text-royal-700">
-              Sousa Costa <span className="text-brand-600">Energia</span>
-            </span>
+            <img src={LOGO} alt="Sousa Costa Energia" className="h-10 w-auto sm:h-11" />
           </a>
           <a
             href="https://www.sousacosta.com.br/"
@@ -728,17 +725,12 @@ function Proposta({ r, lead, hoje, validade, onVoltar }) {
         {/* CAPA */}
         <section className="avoid-break break-inside-avoid rounded-2xl bg-gradient-to-br from-royal-700 to-royal-900 p-8 text-white shadow-card print:rounded-none">
           <div className="flex items-center gap-3">
-            <svg viewBox="0 0 100 100" className="h-11 w-11" aria-hidden="true">
-              <rect width="100" height="100" rx="24" fill="#ffffff" />
-              <path
-                d="M68 34c-4-6-11-9-19-9-11 0-19 6-19 15 0 8 6 12 17 14 8 2 11 3 11 7 0 3-3 5-9 5-6 0-11-2-15-7l-8 9c5 7 13 10 22 10 12 0 20-6 20-16 0-8-6-12-18-15-7-2-10-3-10-6 0-3 3-5 8-5 5 0 9 2 12 6z"
-                fill="#3E4095"
-              />
-            </svg>
-            <div>
-              <p className="font-display text-lg font-extrabold leading-none">Sousa Costa Energia</p>
-              <p className="text-xs text-royal-200">Energia solar no Rio Grande do Norte</p>
-            </div>
+            <img src={LOGO_BRANCA} alt="Sousa Costa Energia" className="h-12 w-auto" />
+            <p className="border-l border-white/20 pl-3 text-xs text-royal-200">
+              Energia solar no
+              <br />
+              Rio Grande do Norte
+            </p>
           </div>
 
           <p className="mt-8 text-sm font-semibold uppercase tracking-widest text-brand-300">
@@ -931,8 +923,9 @@ function Proposta({ r, lead, hoje, validade, onVoltar }) {
           <p className="mt-1 text-sm text-royal-200">
             Fale com um especialista e garanta sua condição. Proposta válida até {validade}.
           </p>
-          <div className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
-            <ContatoItem icon={MessageCircle} v={EMPRESA.whatsappExibicao} />
+          <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+            <ContatoItem icon={Phone} v={`Contato: ${EMPRESA.telefoneExibicao}`} />
+            <ContatoItem icon={MessageCircle} v={`WhatsApp: ${EMPRESA.whatsappExibicao}`} />
             <ContatoItem icon={Mail} v={EMPRESA.email} />
             <ContatoItem icon={MapPin} v="São Gonçalo do Amarante/RN" />
           </div>
@@ -950,9 +943,9 @@ function Proposta({ r, lead, hoje, validade, onVoltar }) {
         </section>
 
         <p className="pb-6 text-center text-xs text-royal-400">
-          {EMPRESA.nome} · CNPJ {EMPRESA.cnpj} · {EMPRESA.site} — Valores estimados com base nas
-          tarifas vigentes da Neoenergia Cosern; podem variar conforme consumo real, geração local e
-          reajustes da ANEEL.
+          {EMPRESA.nome} · CNPJ {EMPRESA.cnpj} · Contato {EMPRESA.telefoneExibicao} · {EMPRESA.site} —
+          Valores estimados com base nas tarifas vigentes da Neoenergia Cosern; podem variar conforme
+          consumo real, geração local e reajustes da ANEEL.
         </p>
       </div>
     </div>
