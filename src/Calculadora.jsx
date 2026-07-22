@@ -92,10 +92,10 @@ function precoPorWp(kwp) {
  *  Componente principal
  * ================================================================== */
 export default function Calculadora() {
-  const [consumo, setConsumo] = useState("910");
+  const [consumo, setConsumo] = useState(""); // cliente preenche
   const [ligacao, setLigacao] = useState("MONO");
-  const [bandeira, setBandeira] = useState("VERDE");
-  const [cip, setCip] = useState("0"); // Iluminação Pública (varia por município — preencher)
+  const [bandeira, setBandeira] = useState("VERDE"); // inicia em verde
+  const [cip, setCip] = useState(""); // Iluminação Pública — cliente preenche
   const [cliente, setCliente] = useState("");
   const [cidade, setCidade] = useState("");
 
@@ -240,7 +240,12 @@ export default function Calculadora() {
               <CardTitle icon={Zap}>Dados do cliente</CardTitle>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Consumo mensal (kWh)">
-                  <Input value={consumo} onChange={(e) => setConsumo(e.target.value)} unit="kWh" />
+                  <Input
+                    value={consumo}
+                    onChange={(e) => setConsumo(e.target.value)}
+                    placeholder="Ex.: 500"
+                    unit="kWh"
+                  />
                 </Field>
                 <Field label="Tipo de ligação">
                   <Select value={ligacao} onChange={(e) => setLigacao(e.target.value)}>
@@ -264,7 +269,12 @@ export default function Calculadora() {
                   label="Iluminação pública (CIP)"
                   hint="Valor da taxa na sua conta — varia por município"
                 >
-                  <Input value={cip} onChange={(e) => setCip(e.target.value)} unit="R$/mês" />
+                  <Input
+                    value={cip}
+                    onChange={(e) => setCip(e.target.value)}
+                    placeholder="Ex.: 35,00"
+                    unit="R$/mês"
+                  />
                 </Field>
                 <Field label="Cliente (opcional — para o relatório)">
                   <Input
