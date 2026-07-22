@@ -165,7 +165,8 @@ export default function Calculadora() {
     set("autosolar", setAutoSolar);
     set("autohibrido", setAutoHibrido);
     set("desconto", setDescAssinatura);
-    if (q.get("proposta") === "1" || q.get("auto") === "1") setShowProposta(true);
+    if (q.get("proposta") === "1" || q.get("auto") === "1" || q.get("pdf") === "1")
+      setShowProposta(true);
   }, []);
 
   // Ajustes avançados (editáveis)
@@ -274,6 +275,10 @@ export default function Calculadora() {
     return base + "?" + q.toString();
   };
   const propostaUrl = buildPropostaUrl();
+  // Modo PDF (renderização por serviço): esconde barra de ações e CTAs
+  const pdfMode =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("pdf") === "1";
 
   // Validação dos campos de captura (obrigatórios para gerar a proposta)
   const emailOk = /\S+@\S+\.\S+/.test(email.trim());
@@ -331,6 +336,7 @@ export default function Calculadora() {
         hoje={hoje}
         validade={validade}
         propostaUrl={propostaUrl}
+        pdfMode={pdfMode}
         onVoltar={() => setShowProposta(false)}
       />
     );
@@ -702,7 +708,7 @@ function paybackTxt(anos) {
 /* ================================================================== *
  *  PROPOSTA — documento imprimível / PDF
  * ================================================================== */
-function Proposta({ r, lead, hoje, validade, propostaUrl, onVoltar }) {
+function Proposta({ r, lead, hoje, validade, propostaUrl, pdfMode, onVoltar }) {
   const modulos = Math.max(1, Math.ceil((r.kwp * 1000) / MODULO_W));
   const geracaoAno = r.C * 12; // sistema dimensionado para o consumo
   const economia25Solar = r.solar.economiaAno * 25 - r.solar.investimento;
@@ -745,8 +751,12 @@ function Proposta({ r, lead, hoje, validade, propostaUrl, onVoltar }) {
 
   return (
     <div className="min-h-screen bg-royal-50 font-sans text-royal-950 print:bg-white">
-      {/* Barra de ações (some na impressão) */}
-      <div className="sticky top-0 z-10 border-b border-royal-100 bg-white/90 backdrop-blur print:hidden">
+      {/* Barra de ações (some na impressão e no modo PDF) */}
+      <div
+        className={`sticky top-0 z-10 border-b border-royal-100 bg-white/90 backdrop-blur print:hidden ${
+          pdfMode ? "hidden" : ""
+        }`}
+      >
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
           <button
             onClick={onVoltar}
@@ -979,17 +989,19 @@ function Proposta({ r, lead, hoje, validade, propostaUrl, onVoltar }) {
             <ContatoItem icon={Mail} v={EMPRESA.email} />
             <ContatoItem icon={MapPin} v="São Gonçalo do Amarante/RN" />
           </div>
-          <a
-            href={waLink(
-              `Olá! Sou ${lead.cliente || "cliente"} e recebi a proposta de energia solar ` +
-                `(consumo ${r.C} kWh/mês). Quero avançar!`
-            )}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-5 py-3 font-bold text-royal-950 transition hover:bg-brand-400 print:hidden"
-          >
-            <MessageCircle className="h-5 w-5" /> Quero avançar no WhatsApp
-          </a>
+          {!pdfMode && (
+            <a
+              href={waLink(
+                `Olá! Sou ${lead.cliente || "cliente"} e recebi a proposta de energia solar ` +
+                  `(consumo ${r.C} kWh/mês). Quero avançar!`
+              )}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-5 py-3 font-bold text-royal-950 transition hover:bg-brand-400 print:hidden"
+            >
+              <MessageCircle className="h-5 w-5" /> Quero avançar no WhatsApp
+            </a>
+          )}
         </section>
 
         <p className="pb-6 text-center text-xs text-royal-400">
