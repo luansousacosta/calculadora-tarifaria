@@ -77,8 +77,8 @@ const LOGO_BRANCA = import.meta.env.BASE_URL + "logo-sousa-costa-branca.png";
 const EMPRESA = {
   nome: "Sousa Costa Energia",
   cnpj: "48.725.763/0001-26",
-  whatsapp: "558491388651", // DDI+DDD, só números
-  whatsappExibicao: "(84) 9138-8651",
+  whatsapp: "5584991260677", // DDI+DDD, só números — número único de contato
+  whatsappExibicao: "(84) 99126-0677",
   telefone: "5584991260677",
   telefoneExibicao: "(84) 99126-0677",
   email: "contato@sousacosta.com.br",
@@ -837,7 +837,7 @@ function Proposta({ r, lead, hoje, validade, propostaUrl, pdfMode, enviada, onVo
         </section>
 
         {/* HERO — INVESTIMENTO E BENEFÍCIO (bate o olho) */}
-        <section className="avoid-break break-inside-avoid rounded-2xl border-2 border-brand-500 bg-brand-500/10 p-6 shadow-card sm:p-8">
+        <section className="avoid-break break-inside-avoid rounded-2xl border-2 border-brand-500 bg-brand-50 p-6 shadow-card sm:p-8">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs font-bold uppercase tracking-widest text-brand-700">
               Proposta recomendada · Solar próprio
@@ -1043,12 +1043,16 @@ function OpcaoCard({ o }) {
   return (
     <div
       className={`avoid-break break-inside-avoid flex flex-col rounded-2xl border p-5 shadow-card ${
-        o.destaque ? "border-brand-500 bg-brand-500/5" : "border-royal-100 bg-white"
+        o.destaque ? "border-brand-500 bg-brand-50" : "border-royal-100 bg-white"
       }`}
     >
       <div className="flex items-center justify-between gap-2">
         <p className="font-display font-bold text-royal-950">{o.nome}</p>
-        <span className="rounded-full bg-royal-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-royal-600">
+        <span
+          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+            o.destaque ? "bg-brand-100 text-brand-700" : "bg-royal-50 text-royal-500"
+          }`}
+        >
           {o.tag}
         </span>
       </div>
@@ -1273,7 +1277,7 @@ function TR({ label, hoje, solar, hibrido, assinatura, accent }) {
       <td
         className={`py-2.5 px-3 text-right tabular-nums font-semibold ${
           accent ? "text-brand-600" : "text-royal-900"
-        } bg-brand-500/5`}
+        } bg-brand-50`}
       >
         {solar}
       </td>
