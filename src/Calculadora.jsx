@@ -95,6 +95,7 @@ export default function Calculadora() {
   const [consumo, setConsumo] = useState("910");
   const [ligacao, setLigacao] = useState("MONO");
   const [bandeira, setBandeira] = useState("VERDE");
+  const [cip, setCip] = useState("112.04"); // Iluminação Pública (varia por município)
   const [cliente, setCliente] = useState("");
   const [cidade, setCidade] = useState("");
 
@@ -108,11 +109,12 @@ export default function Calculadora() {
   const r = useMemo(() => {
     const C = num(consumo);
     const band = BANDEIRAS[bandeira]?.kwh ?? 0;
+    const cipVal = num(cip); // taxa de iluminação pública informada
     const dispKwh = LIGACOES[ligacao]?.kwh ?? 30;
     const dispCusto = dispKwh * TARIFA_CHEIA;
 
     // Conta cheia (sem solar)
-    const contaCheia = C * (TARIFA_CHEIA + band) + PREMISSAS.cip;
+    const contaCheia = C * (TARIFA_CHEIA + band) + cipVal;
 
     // Potência e investimento estimados
     const g = num(geracao) || 130;
@@ -126,7 +128,7 @@ export default function Calculadora() {
       const a = Math.min(1, Math.max(0, num(autoPctStr) / 100));
       const compensado = C * (1 - a); // injetado e compensado → paga Fio B
       const fioB = compensado * FIO_B;
-      const parcelaFixa = Math.max(dispCusto, fioB) + PREMISSAS.cip;
+      const parcelaFixa = Math.max(dispCusto, fioB) + cipVal;
       const contaFinal = parcelaFixa;
       const economiaMes = contaCheia - contaFinal;
       const economiaAno = economiaMes * 12;
@@ -146,7 +148,7 @@ export default function Calculadora() {
 
     // Cenário assinatura: 100% compensado (geração remota) + desconto garantido
     const fioBAss = C * FIO_B;
-    const parcelaFixaAss = Math.max(dispCusto, fioBAss) + PREMISSAS.cip;
+    const parcelaFixaAss = Math.max(dispCusto, fioBAss) + cipVal;
     const economizavel = contaCheia - parcelaFixaAss;
     const desc = Math.min(1, Math.max(0, num(descAssinatura) / 100));
     const economiaAssMes = economizavel * desc;
@@ -170,7 +172,7 @@ export default function Calculadora() {
       hibrido: cenarioProprio(autoHibrido, invHibrido),
       assinatura,
     };
-  }, [consumo, ligacao, bandeira, geracao, autoSolar, autoHibrido, descAssinatura]);
+  }, [consumo, ligacao, bandeira, cip, geracao, autoSolar, autoHibrido, descAssinatura]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-royal-50/40 to-white font-sans text-royal-950">
@@ -257,6 +259,12 @@ export default function Calculadora() {
                       </option>
                     ))}
                   </Select>
+                </Field>
+                <Field
+                  label="Iluminação pública (CIP)"
+                  hint="Valor da taxa na sua conta — varia por município"
+                >
+                  <Input value={cip} onChange={(e) => setCip(e.target.value)} unit="R$/mês" />
                 </Field>
                 <Field label="Cliente (opcional — para o relatório)">
                   <Input
@@ -455,7 +463,8 @@ export default function Calculadora() {
             <p>
               Estimativa com base nas tarifas da Neoenergia Cosern — B1 Residencial (fatura 06/2026,
               com tributos): tarifa cheia {brl(TARIFA_CHEIA)}/kWh, Fio B não compensado{" "}
-              {brl(FIO_B)}/kWh, CIP {brl(PREMISSAS.cip)}/mês. Preços de sistemas: Pesquisa SED Greener
+              {brl(FIO_B)}/kWh; a iluminação pública (CIP) é informada pelo cliente. Preços de
+              sistemas: Pesquisa SED Greener
               (jan/2026); híbrido = solar + 85%. No solar/híbrido considera-se autoconsumo instantâneo
               (não paga Fio B) e o restante compensado (paga Fio B, regra da Lei 14.300/2022); paga-se
               sempre o maior entre o Fio B e o custo de disponibilidade, mais a CIP. A assinatura é
