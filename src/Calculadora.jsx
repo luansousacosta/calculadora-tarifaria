@@ -76,10 +76,20 @@ const EMPRESA = {
   site: "www.sousacosta.com.br",
   endereco: "Rua Vitória, 17, Amarante — São Gonçalo do Amarante/RN",
 };
-// Webhook de captação (mesmo fluxo n8n → Reonic do site) — best-effort
-const N8N_WEBHOOK = "https://sousacosta.app.n8n.cloud/webhook/lead-site";
+// Webhook de captação — endpoint dedicado da calculadora (n8n → Reonic).
+// Sobrescreva em build com VITE_LEAD_WEBHOOK_URL se precisar.
+const N8N_WEBHOOK =
+  (import.meta.env && import.meta.env.VITE_LEAD_WEBHOOK_URL) ||
+  "https://sousacosta.app.n8n.cloud/webhook/lead-calculadora-solar";
 const MODULO_W = 620; // potência do módulo p/ estimar nº de placas
 const VALIDADE_DIAS = 15;
+
+// Cenários que podem virar proposta
+const CENARIOS = {
+  SOLAR: { nome: "Energia Solar", temSistema: true, temInvest: true, bateria: false },
+  HIBRIDO: { nome: "Solar + Bateria", temSistema: true, temInvest: true, bateria: true },
+  ASSINATURA: { nome: "Assinatura de Energia", temSistema: false, temInvest: false, bateria: false },
+};
 
 const so = (v) => String(v || "").replace(/\D/g, ""); // só dígitos
 const waLink = (msg) =>
@@ -129,6 +139,7 @@ export default function Calculadora() {
   const [endereco, setEndereco] = useState("");
   const [cidade, setCidade] = useState("");
   const [showProposta, setShowProposta] = useState(false);
+  const [cenarioProposta, setCenarioProposta] = useState("SOLAR");
 
   // Ajustes avançados (editáveis)
   const [geracao, setGeracao] = useState("130"); // kWh/kWp/mês (RN)
@@ -212,19 +223,27 @@ export default function Calculadora() {
     return d.toLocaleDateString("pt-BR");
   }, []);
 
-  // Captação do lead (best-effort para o fluxo n8n → Reonic, como no site)
+  const dadosCenario =
+    cenarioProposta === "ASSINATURA"
+      ? r.assinatura
+      : cenarioProposta === "HIBRIDO"
+      ? r.hibrido
+      : r.solar;
+
+  // Captação do lead (best-effort para o fluxo n8n → Reonic)
   const enviarLead = () => {
     const payload = {
       nome: cliente,
       telefone: so(whatsapp),
       email,
       endereco: [endereco, cidade].filter(Boolean).join(" - "),
-      interesse: "Energia solar (calculadora)",
+      interesse: `Energia solar — ${CENARIOS[cenarioProposta].nome}`,
+      cenario: CENARIOS[cenarioProposta].nome,
       consumoKwh: r.C,
       contaAtual: Number(r.contaCheia.toFixed(2)),
       sistemaKwp: Number(r.kwp.toFixed(2)),
-      economiaMes: Number(r.solar.economiaMes.toFixed(2)),
-      investimento: Number(r.solar.investimento.toFixed(2)),
+      economiaMes: Number((dadosCenario.economiaMes || 0).toFixed(2)),
+      investimento: Number((dadosCenario.investimento || 0).toFixed(2)),
       origem: "calculadora-solar",
       consentimentoLGPD: true,
       paginaUrl: typeof window !== "undefined" ? window.location.href : "",
@@ -252,6 +271,8 @@ export default function Calculadora() {
     return (
       <Proposta
         r={r}
+        cenario={cenarioProposta}
+        dados={dadosCenario}
         lead={{ cliente, whatsapp, email, endereco, cidade }}
         hoje={hoje}
         validade={validade}
@@ -572,10 +593,30 @@ export default function Calculadora() {
             Receba a proposta com o seu nome
           </h3>
           <p className="mt-1 text-sm text-royal-600">
-            Preencha seus dados para gerar uma proposta em PDF e falar com um especialista.
+            Escolha o cenário, preencha seus dados e gere uma proposta em PDF.
           </p>
 
-          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <div className="mt-5">
+            <Field label="Cenário da proposta">
+              <div className="grid grid-cols-3 gap-2">
+                {Object.keys(CENARIOS).map((k) => (
+                  <button
+                    key={k}
+                    onClick={() => setCenarioProposta(k)}
+                    className={`rounded-xl border px-2 py-2.5 text-xs font-semibold transition sm:text-sm ${
+                      cenarioProposta === k
+                        ? "border-royal-600 bg-royal-600 text-white"
+                        : "border-royal-200 bg-white text-royal-600 hover:border-royal-300"
+                    }`}
+                  >
+                    {CENARIOS[k].nome}
+                  </button>
+                ))}
+              </div>
+            </Field>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Nome completo">
               <Input value={cliente} onChange={(e) => setCliente(e.target.value)} placeholder="Seu nome" />
             </Field>
@@ -645,11 +686,13 @@ function paybackTxt(anos) {
 /* ================================================================== *
  *  PROPOSTA — documento imprimível / PDF
  * ================================================================== */
-function Proposta({ r, lead, hoje, validade, onVoltar }) {
-  const s = r.solar;
+function Proposta({ r, cenario, dados, lead, hoje, validade, onVoltar }) {
+  const meta = CENARIOS[cenario] || CENARIOS.SOLAR;
+  const s = dados;
   const modulos = Math.max(1, Math.ceil((r.kwp * 1000) / MODULO_W));
   const geracaoAno = r.C * 12; // sistema dimensionado para o consumo
-  const economia25 = s.economiaAno * 25 - s.investimento;
+  const invest = s.investimento || 0;
+  const economia25 = s.economiaAno * 25 - invest;
 
   return (
     <div className="min-h-screen bg-royal-50 font-sans text-royal-950 print:bg-white">
@@ -689,7 +732,7 @@ function Proposta({ r, lead, hoje, validade, onVoltar }) {
           </div>
 
           <p className="mt-8 text-sm font-semibold uppercase tracking-widest text-brand-300">
-            Proposta de energia solar
+            Proposta · {meta.nome}
           </p>
           <h1 className="mt-1 font-display text-3xl font-extrabold sm:text-4xl">
             {lead.cliente || "Cliente"}
@@ -702,7 +745,10 @@ function Proposta({ r, lead, hoje, validade, onVoltar }) {
             <CapaItem k="Emitida em" v={hoje} />
             <CapaItem k="Válida até" v={validade} />
             <CapaItem k="Consumo" v={`${r.C.toLocaleString("pt-BR")} kWh/mês`} />
-            <CapaItem k="Sistema" v={`${r.kwp.toFixed(1)} kWp`} />
+            <CapaItem
+              k={meta.temSistema ? "Sistema" : "Modelo"}
+              v={meta.temSistema ? `${r.kwp.toFixed(1)} kWp` : "Sem instalação"}
+            />
           </div>
         </section>
 
@@ -723,49 +769,78 @@ function Proposta({ r, lead, hoje, validade, onVoltar }) {
           </div>
         </section>
 
-        {/* SISTEMA */}
-        <section className="break-inside-avoid rounded-2xl border border-royal-100 bg-white p-6 shadow-card">
-          <h2 className="font-display text-lg font-bold text-royal-900">Seu sistema fotovoltaico</h2>
-          <div className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2">
-            <LinhaSpec k="Potência estimada" v={`${r.kwp.toFixed(1)} kWp`} />
-            <LinhaSpec k="Geração estimada" v={`${geracaoAno.toLocaleString("pt-BR")} kWh/ano`} />
-            <LinhaSpec k="Módulos (aprox.)" v={`${modulos} × ${MODULO_W} W`} />
-            <LinhaSpec k="Inversor" v={`~${Math.max(1, Math.round(r.kwp))} kW`} />
-          </div>
-          <p className="mt-4 text-xs text-royal-400">
-            Quantidades e modelos são estimativas dimensionadas pelo consumo informado. A configuração
-            final é definida em visita técnica.
-          </p>
-        </section>
+        {/* SISTEMA (solar / híbrido) */}
+        {meta.temSistema && (
+          <section className="avoid-break break-inside-avoid rounded-2xl border border-royal-100 bg-white p-6 shadow-card">
+            <h2 className="font-display text-lg font-bold text-royal-900">
+              Seu sistema fotovoltaico
+            </h2>
+            <div className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2">
+              <LinhaSpec k="Potência estimada" v={`${r.kwp.toFixed(1)} kWp`} />
+              <LinhaSpec k="Geração estimada" v={`${geracaoAno.toLocaleString("pt-BR")} kWh/ano`} />
+              <LinhaSpec k="Módulos (aprox.)" v={`${modulos} × ${MODULO_W} W`} />
+              <LinhaSpec k="Inversor" v={`~${Math.max(1, Math.round(r.kwp))} kW`} />
+              {meta.bateria && (
+                <LinhaSpec k="Armazenamento" v="Bateria (backup) inclusa" />
+              )}
+            </div>
+            <p className="mt-4 text-xs text-royal-400">
+              Quantidades e modelos são estimativas dimensionadas pelo consumo informado. A
+              configuração final é definida em visita técnica.
+            </p>
+          </section>
+        )}
 
-        {/* INVESTIMENTO */}
-        <section className="break-inside-avoid rounded-2xl border border-royal-100 bg-white p-6 shadow-card">
-          <h2 className="font-display text-lg font-bold text-royal-900">Investimento e retorno</h2>
-          <div className="mt-4 grid gap-4 sm:grid-cols-3">
-            <ContaBox titulo="Investimento" valor={brl(s.investimento)} tom="indigo" />
-            <ContaBox titulo="Retorno (payback)" valor={paybackTxt(s.paybackAnos)} tom="cinza" />
-            <ContaBox
-              titulo="Retorno ao ano"
-              valor={
-                s.investimento > 0
-                  ? pct(s.economiaAno / s.investimento)
-                  : "—"
-              }
-              tom="verde"
-            />
-          </div>
-          <ul className="mt-5 space-y-2 text-sm text-royal-600">
-            {[
-              "Redução imediata na conta de luz já nas primeiras faturas",
-              "Valorização do imóvel e energia limpa por mais de 25 anos",
-              "Projeto, instalação e homologação junto à Neoenergia Cosern",
-            ].map((t) => (
-              <li key={t} className="flex items-start gap-2">
-                <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" /> {t}
-              </li>
-            ))}
-          </ul>
-        </section>
+        {/* INVESTIMENTO (solar / híbrido) */}
+        {meta.temInvest ? (
+          <section className="avoid-break break-inside-avoid rounded-2xl border border-royal-100 bg-white p-6 shadow-card">
+            <h2 className="font-display text-lg font-bold text-royal-900">Investimento e retorno</h2>
+            <div className="mt-4 grid gap-4 sm:grid-cols-3">
+              <ContaBox titulo="Investimento" valor={brl(invest)} tom="indigo" />
+              <ContaBox titulo="Retorno (payback)" valor={paybackTxt(s.paybackAnos)} tom="cinza" />
+              <ContaBox
+                titulo="Retorno ao ano"
+                valor={invest > 0 ? pct(s.economiaAno / invest) : "—"}
+                tom="verde"
+              />
+            </div>
+            <ul className="mt-5 space-y-2 text-sm text-royal-600">
+              {[
+                "Redução imediata na conta de luz já nas primeiras faturas",
+                meta.bateria
+                  ? "Energia de reserva (backup) na falta de luz"
+                  : "Valorização do imóvel e energia limpa por mais de 25 anos",
+                "Projeto, instalação e homologação junto à Neoenergia Cosern",
+              ].map((t) => (
+                <li key={t} className="flex items-start gap-2">
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" /> {t}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : (
+          <section className="avoid-break break-inside-avoid rounded-2xl border border-royal-100 bg-white p-6 shadow-card">
+            <h2 className="font-display text-lg font-bold text-royal-900">
+              Como funciona a assinatura
+            </h2>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <ContaBox titulo="Investimento" valor="Sem investir" tom="indigo" />
+              <ContaBox titulo="Início da economia" valor="Imediato" tom="verde" />
+            </div>
+            <ul className="mt-5 space-y-2 text-sm text-royal-600">
+              {[
+                "Desconto garantido na conta todo mês, mesmo sem gerar",
+                "Sem obras, sem equipamentos e sem instalar nada",
+                "Energia limpa de uma usina da Sousa Costa Energia",
+                "Sem fidelidade de longo prazo — cancele quando quiser",
+              ].map((t) => (
+                <li key={t} className="flex items-start gap-2">
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" /> {t}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {/* CONTATO */}
         <section className="break-inside-avoid rounded-2xl bg-royal-900 p-6 text-white shadow-card print:rounded-none">
@@ -780,8 +855,8 @@ function Proposta({ r, lead, hoje, validade, onVoltar }) {
           </div>
           <a
             href={waLink(
-              `Olá! Sou ${lead.cliente || "cliente"} e recebi a proposta de energia solar ` +
-                `(${r.kwp.toFixed(1)} kWp · economia ${brl(s.economiaMes)}/mês). Quero avançar!`
+              `Olá! Sou ${lead.cliente || "cliente"} e recebi a proposta (${meta.nome} · ` +
+                `economia ${brl(s.economiaMes)}/mês). Quero avançar!`
             )}
             target="_blank"
             rel="noreferrer"

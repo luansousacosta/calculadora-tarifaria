@@ -40,6 +40,39 @@ body {
   }
 }
 
+/* ---- Impressão / PDF: dimensionamento profissional da folha ---- */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+  html,
+  body {
+    background: #ffffff !important;
+  }
+  /* Mantém as cores da marca (capa, destaques) na impressão */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  /* Não corta seções/campos no meio da página */
+  section,
+  .avoid-break {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  h1,
+  h2,
+  h3 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  /* Remove sombras/tela desnecessárias no papel */
+  .shadow-card {
+    box-shadow: none !important;
+  }
+}
+
 /* Scrollbar sutil na paleta da marca */
 ::-webkit-scrollbar {
   width: 10px;
