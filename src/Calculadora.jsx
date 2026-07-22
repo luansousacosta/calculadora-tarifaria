@@ -15,6 +15,7 @@ import {
   FileText,
   MessageCircle,
   Check,
+  CheckCircle2,
   Phone,
   Mail,
   MapPin,
@@ -140,6 +141,7 @@ export default function Calculadora() {
   const [endereco, setEndereco] = useState("");
   const [cidade, setCidade] = useState("");
   const [showProposta, setShowProposta] = useState(false);
+  const [enviada, setEnviada] = useState(false); // proposta enviada p/ e-mail + WhatsApp
 
   // Pré-preenchimento por URL (ex.: link gerado pela IA do WhatsApp).
   // Ex.: ?consumo=910&cip=40&nome=Fulano&whatsapp=5584...&email=..&proposta=1
@@ -322,8 +324,18 @@ export default function Calculadora() {
     }
   };
 
-  const gerarProposta = () => {
+  // Envia a proposta direto para o e-mail e o WhatsApp do cliente
+  // (o PDF é gerado no fluxo n8n a partir da propostaUrl) e mostra a confirmação.
+  const enviarProposta = () => {
+    if (!podeGerar) return;
     enviarLead();
+    setEnviada(true);
+    if (typeof window !== "undefined")
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+  };
+
+  // Fallback discreto: abrir a proposta na tela agora (não reenvia o lead).
+  const verPropostaAgora = () => {
     setShowProposta(true);
     if (typeof window !== "undefined") window.scrollTo(0, 0);
   };
@@ -625,70 +637,110 @@ export default function Calculadora() {
               Gerar proposta personalizada
             </span>
           </div>
-          <h3 className="mt-2 font-display text-xl font-bold text-royal-950">
-            Receba a proposta com o seu nome
-          </h3>
-          <p className="mt-1 text-sm text-royal-600">
-            Preencha seus dados para gerar a proposta com as 3 opções (solar, solar + bateria e
-            assinatura) e falar com um especialista. Campos obrigatórios: nome, WhatsApp e e-mail.
-          </p>
+          {enviada ? (
+            <div className="mt-4">
+              <div className="flex items-start gap-3 rounded-xl border border-emerald-300 bg-emerald-50 p-4">
+                <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-emerald-600" />
+                <div>
+                  <h3 className="font-display text-lg font-bold text-emerald-800">
+                    Proposta enviada! ✅
+                  </h3>
+                  <p className="mt-1 text-sm text-emerald-700">
+                    Acabamos de enviar a sua proposta em PDF para{" "}
+                    <strong>{email}</strong> e para o seu WhatsApp. Chega em instantes — confira
+                    também a caixa de spam do e-mail.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                <a
+                  href={waLink(
+                    `Olá! Sou ${cliente || "cliente"} e recebi a proposta de energia solar. ` +
+                      `Quero tirar uma dúvida.`
+                  )}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-500 px-5 py-3.5 font-bold text-royal-950 shadow-lg shadow-brand-500/30 transition hover:bg-brand-400"
+                >
+                  <MessageCircle className="h-5 w-5" /> Falar com um especialista
+                </a>
+                <button
+                  onClick={verPropostaAgora}
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-royal-300 bg-white px-5 py-3.5 font-semibold text-royal-700 transition hover:bg-royal-50"
+                >
+                  <FileText className="h-5 w-5" /> Ver a proposta agora
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <h3 className="mt-2 font-display text-xl font-bold text-royal-950">
+                Receba a proposta com o seu nome
+              </h3>
+              <p className="mt-1 text-sm text-royal-600">
+                Preencha seus dados e enviamos a proposta com as 3 opções (solar, solar + bateria e
+                assinatura) direto para o seu <strong>e-mail e WhatsApp</strong>. Campos
+                obrigatórios: nome, WhatsApp e e-mail.
+              </p>
 
-          <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            <Field label="Nome completo *">
-              <Input value={cliente} onChange={(e) => setCliente(e.target.value)} placeholder="Seu nome" />
-            </Field>
-            <Field label="WhatsApp *">
-              <Input
-                value={whatsapp}
-                onChange={(e) => setWhatsapp(e.target.value)}
-                placeholder="(84) 9 9999-9999"
-              />
-            </Field>
-            <Field label="E-mail *">
-              <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@email.com" />
-            </Field>
-            <Field label="Endereço">
-              <Input
-                value={endereco}
-                onChange={(e) => setEndereco(e.target.value)}
-                placeholder="Rua, número, bairro"
-              />
-            </Field>
-            <Field label="Cidade">
-              <Input value={cidade} onChange={(e) => setCidade(e.target.value)} placeholder="Natal/RN" />
-            </Field>
-          </div>
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <Field label="Nome completo *">
+                  <Input value={cliente} onChange={(e) => setCliente(e.target.value)} placeholder="Seu nome" />
+                </Field>
+                <Field label="WhatsApp *">
+                  <Input
+                    value={whatsapp}
+                    onChange={(e) => setWhatsapp(e.target.value)}
+                    placeholder="(84) 9 9999-9999"
+                  />
+                </Field>
+                <Field label="E-mail *">
+                  <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@email.com" />
+                </Field>
+                <Field label="Endereço">
+                  <Input
+                    value={endereco}
+                    onChange={(e) => setEndereco(e.target.value)}
+                    placeholder="Rua, número, bairro"
+                  />
+                </Field>
+                <Field label="Cidade">
+                  <Input value={cidade} onChange={(e) => setCidade(e.target.value)} placeholder="Natal/RN" />
+                </Field>
+              </div>
 
-          <div className="mt-2 flex flex-col gap-3 sm:flex-row">
-            <button
-              onClick={gerarProposta}
-              disabled={!podeGerar}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-royal-600 px-5 py-3.5 font-bold text-white shadow-lg shadow-royal-600/25 transition hover:bg-royal-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <FileText className="h-5 w-5" /> Gerar proposta
-            </button>
-            <a
-              href={waLink(
-                `Olá! Sou ${cliente || "cliente"} e quero uma proposta de energia solar. ` +
-                  `Consumo ~${r.C || 0} kWh/mês. Vim pela calculadora.`
+              <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                <button
+                  onClick={enviarProposta}
+                  disabled={!podeGerar}
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-royal-600 px-5 py-3.5 font-bold text-white shadow-lg shadow-royal-600/25 transition hover:bg-royal-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <FileText className="h-5 w-5" /> Receber minha proposta
+                </button>
+                <a
+                  href={waLink(
+                    `Olá! Sou ${cliente || "cliente"} e quero uma proposta de energia solar. ` +
+                      `Consumo ~${r.C || 0} kWh/mês. Vim pela calculadora.`
+                  )}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={enviarLead}
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-500 px-5 py-3.5 font-bold text-royal-950 shadow-lg shadow-brand-500/30 transition hover:bg-brand-400"
+                >
+                  <MessageCircle className="h-5 w-5" /> Falar no WhatsApp
+                </a>
+              </div>
+              {!podeGerar && (
+                <p className="mt-2 text-xs font-medium text-royal-500">
+                  Para receber a proposta, preencha: {faltando.join(", ")}.
+                </p>
               )}
-              target="_blank"
-              rel="noreferrer"
-              onClick={enviarLead}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-500 px-5 py-3.5 font-bold text-royal-950 shadow-lg shadow-brand-500/30 transition hover:bg-brand-400"
-            >
-              <MessageCircle className="h-5 w-5" /> Falar no WhatsApp
-            </a>
-          </div>
-          {!podeGerar && (
-            <p className="mt-2 text-xs font-medium text-royal-500">
-              Para gerar a proposta, preencha: {faltando.join(", ")}.
-            </p>
+              <p className="mt-2 text-xs text-royal-400">
+                Ao continuar você concorda em ser contatado pela Sousa Costa Energia sobre esta
+                simulação (LGPD).
+              </p>
+            </>
           )}
-          <p className="mt-2 text-xs text-royal-400">
-            Ao continuar você concorda em ser contatado pela Sousa Costa Energia sobre esta
-            simulação (LGPD).
-          </p>
         </div>
 
         <p className="mt-8 text-center text-xs text-royal-400">
