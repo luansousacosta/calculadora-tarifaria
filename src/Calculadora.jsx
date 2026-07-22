@@ -19,6 +19,7 @@ import {
   Mail,
   MapPin,
   ShieldCheck,
+  Link2,
 } from "lucide-react";
 
 /* ================================================================== *
@@ -160,6 +161,10 @@ export default function Calculadora() {
     if (lig && LIGACOES[lig]) setLigacao(lig);
     const ban = q.get("bandeira");
     if (ban && BANDEIRAS[ban]) setBandeira(ban);
+    set("geracao", setGeracao);
+    set("autosolar", setAutoSolar);
+    set("autohibrido", setAutoHibrido);
+    set("desconto", setDescAssinatura);
     if (q.get("proposta") === "1" || q.get("auto") === "1") setShowProposta(true);
   }, []);
 
@@ -245,6 +250,31 @@ export default function Calculadora() {
     return d.toLocaleDateString("pt-BR");
   }, []);
 
+  // Link que reabre exatamente esta proposta (salvar/compartilhar)
+  const buildPropostaUrl = () => {
+    const base =
+      typeof window !== "undefined"
+        ? window.location.origin + window.location.pathname
+        : "https://calculadora.sousacosta.com.br/";
+    const q = new URLSearchParams();
+    if (consumo) q.set("consumo", consumo);
+    if (cip) q.set("cip", cip);
+    if (ligacao && ligacao !== "MONO") q.set("ligacao", ligacao);
+    if (bandeira && bandeira !== "VERDE") q.set("bandeira", bandeira);
+    if (cliente) q.set("nome", cliente);
+    if (whatsapp) q.set("whatsapp", whatsapp);
+    if (email) q.set("email", email);
+    if (endereco) q.set("endereco", endereco);
+    if (cidade) q.set("cidade", cidade);
+    if (geracao && geracao !== "130") q.set("geracao", geracao);
+    if (autoSolar && autoSolar !== "30") q.set("autosolar", autoSolar);
+    if (autoHibrido && autoHibrido !== "65") q.set("autohibrido", autoHibrido);
+    if (descAssinatura && descAssinatura !== "20") q.set("desconto", descAssinatura);
+    q.set("proposta", "1");
+    return base + "?" + q.toString();
+  };
+  const propostaUrl = buildPropostaUrl();
+
   // Validação dos campos de captura (obrigatórios para gerar a proposta)
   const emailOk = /\S+@\S+\.\S+/.test(email.trim());
   const faltando = [];
@@ -270,6 +300,7 @@ export default function Calculadora() {
       economiaHibridoMes: Number(r.hibrido.economiaMes.toFixed(2)),
       investimentoHibrido: Number(r.hibrido.investimento.toFixed(2)),
       economiaAssinaturaMes: Number(r.assinatura.economiaMes.toFixed(2)),
+      propostaUrl,
       origem: "calculadora-solar",
       consentimentoLGPD: true,
       paginaUrl: typeof window !== "undefined" ? window.location.href : "",
@@ -299,6 +330,7 @@ export default function Calculadora() {
         lead={{ cliente, whatsapp, email, endereco, cidade }}
         hoje={hoje}
         validade={validade}
+        propostaUrl={propostaUrl}
         onVoltar={() => setShowProposta(false)}
       />
     );
@@ -670,10 +702,20 @@ function paybackTxt(anos) {
 /* ================================================================== *
  *  PROPOSTA — documento imprimível / PDF
  * ================================================================== */
-function Proposta({ r, lead, hoje, validade, onVoltar }) {
+function Proposta({ r, lead, hoje, validade, propostaUrl, onVoltar }) {
   const modulos = Math.max(1, Math.ceil((r.kwp * 1000) / MODULO_W));
   const geracaoAno = r.C * 12; // sistema dimensionado para o consumo
   const economia25Solar = r.solar.economiaAno * 25 - r.solar.investimento;
+  const [copiado, setCopiado] = useState(false);
+  const copiarLink = async () => {
+    try {
+      await navigator.clipboard.writeText(propostaUrl);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    } catch (e) {
+      /* clipboard indisponível */
+    }
+  };
   const opcoes = [
     {
       nome: "Solar próprio",
@@ -712,12 +754,20 @@ function Proposta({ r, lead, hoje, validade, onVoltar }) {
           >
             <ArrowLeft className="h-4 w-4" /> Voltar
           </button>
-          <button
-            onClick={() => window.print()}
-            className="inline-flex items-center gap-1.5 rounded-full bg-royal-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-royal-700"
-          >
-            <Printer className="h-4 w-4" /> Gerar PDF
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={copiarLink}
+              className="inline-flex items-center gap-1.5 rounded-full border border-royal-200 px-4 py-2 text-sm font-semibold text-royal-700 transition hover:bg-royal-50"
+            >
+              <Link2 className="h-4 w-4" /> {copiado ? "Link copiado!" : "Copiar link"}
+            </button>
+            <button
+              onClick={() => window.print()}
+              className="inline-flex items-center gap-1.5 rounded-full bg-royal-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-royal-700"
+            >
+              <Printer className="h-4 w-4" /> Gerar PDF
+            </button>
+          </div>
         </div>
       </div>
 
