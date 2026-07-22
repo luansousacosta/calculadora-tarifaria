@@ -18,6 +18,7 @@ import {
   Phone,
   Mail,
   MapPin,
+  ShieldCheck,
 } from "lucide-react";
 
 /* ================================================================== *
@@ -675,6 +676,7 @@ function paybackTxt(anos) {
 function Proposta({ r, lead, hoje, validade, onVoltar }) {
   const modulos = Math.max(1, Math.ceil((r.kwp * 1000) / MODULO_W));
   const geracaoAno = r.C * 12; // sistema dimensionado para o consumo
+  const economia25Solar = r.solar.economiaAno * 25 - r.solar.investimento;
   const opcoes = [
     {
       nome: "Solar próprio",
@@ -757,9 +759,75 @@ function Proposta({ r, lead, hoje, validade, onVoltar }) {
           </div>
         </section>
 
+        {/* HERO — INVESTIMENTO E BENEFÍCIO (bate o olho) */}
+        <section className="avoid-break break-inside-avoid rounded-2xl border-2 border-brand-500 bg-brand-500/10 p-6 shadow-card sm:p-8">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs font-bold uppercase tracking-widest text-brand-700">
+              Proposta recomendada · Solar próprio
+            </p>
+            <span className="rounded-full bg-brand-500 px-3 py-1 text-xs font-bold text-royal-950">
+              até {pct(r.solar.descontoPct)} de desconto
+            </span>
+          </div>
+
+          <div className="mt-5 grid gap-4 sm:grid-cols-3">
+            <div className="rounded-2xl bg-white p-5 text-center shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-royal-400">
+                Investimento
+              </p>
+              <p className="mt-1 font-display text-2xl font-extrabold text-royal-900 sm:text-3xl">
+                {brl(r.solar.investimento)}
+              </p>
+              <p className="text-xs text-royal-400">sistema de {r.kwp.toFixed(1)} kWp</p>
+            </div>
+            <div className="rounded-2xl bg-royal-900 p-5 text-center text-white shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-brand-300">
+                Você economiza (25 anos)
+              </p>
+              <p className="mt-1 font-display text-2xl font-extrabold text-brand-400 sm:text-3xl">
+                {brl(economia25Solar)}
+              </p>
+              <p className="text-xs text-royal-300">{brl(r.solar.economiaMes)}/mês</p>
+            </div>
+            <div className="rounded-2xl bg-white p-5 text-center shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-royal-400">
+                Retorno
+              </p>
+              <p className="mt-1 font-display text-2xl font-extrabold text-royal-900 sm:text-3xl">
+                {paybackTxt(r.solar.paybackAnos)}
+              </p>
+              <p className="text-xs text-royal-400">e energia por +25 anos</p>
+            </div>
+          </div>
+
+          <p className="mt-4 text-center text-sm font-medium text-royal-700">
+            Você investe uma vez e passa a economizar todos os meses — o sistema se paga e ainda gera
+            energia por mais de 25 anos.
+          </p>
+        </section>
+
+        {/* BENEFÍCIOS */}
+        <section className="avoid-break break-inside-avoid grid gap-3 sm:grid-cols-4">
+          {[
+            { icon: TrendingDown, t: `Até ${pct(r.solar.descontoPct)} de desconto` },
+            { icon: Sun, t: "Energia limpa +25 anos" },
+            { icon: ShieldCheck, t: "Projeto e homologação" },
+            { icon: BatteryCharging, t: "Opção com bateria" },
+          ].map((b) => (
+            <div
+              key={b.t}
+              className="flex items-center gap-2 rounded-xl border border-royal-100 bg-white p-3 text-sm font-medium text-royal-700 shadow-card"
+            >
+              <b.icon className="h-5 w-5 shrink-0 text-brand-600" /> {b.t}
+            </div>
+          ))}
+        </section>
+
         {/* 3 OPÇÕES */}
         <section className="avoid-break break-inside-avoid">
-          <h2 className="mb-1 font-display text-xl font-bold text-royal-950">Suas 3 opções</h2>
+          <h2 className="mb-1 font-display text-xl font-bold text-royal-950">
+            Compare as 3 opções
+          </h2>
           <p className="mb-4 text-sm text-royal-500">
             Escolha o caminho que faz mais sentido para você — todos reduzem a sua conta de luz.
           </p>
