@@ -270,9 +270,8 @@ export default function Calculadora() {
     try {
       fetch(N8N_WEBHOOK, {
         method: "POST",
-        mode: "no-cors",
         keepalive: true,
-        headers: { "Content-Type": "text/plain;charset=UTF-8" },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       }).catch(() => {});
     } catch (e) {
