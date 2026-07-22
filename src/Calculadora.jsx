@@ -763,7 +763,11 @@ function Proposta({ r, lead, hoje, validade, propostaUrl, pdfMode, enviada, onVo
   ];
 
   return (
-    <div className="min-h-screen bg-royal-50 font-sans text-royal-950 print:bg-white">
+    <div
+      className={`min-h-screen font-sans text-royal-950 print:bg-white ${
+        pdfMode ? "bg-white pdf-flat" : "bg-royal-50"
+      }`}
+    >
       {/* Barra de ações (some na impressão e no modo PDF) */}
       <div
         className={`sticky top-0 z-10 border-b border-royal-100 bg-white/90 backdrop-blur print:hidden ${

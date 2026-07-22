@@ -40,6 +40,17 @@ body {
   }
 }
 
+/* ---- Modo PDF via serviço (?pdf=1): renderiza em mídia screen, então o
+   @media print abaixo não se aplica. Removemos as sombras dos quadros, que
+   no PDF apareciam como um "fundo cinza" atrás de cada card, e garantimos
+   fundo branco limpo. ---- */
+.pdf-flat {
+  background: #ffffff !important;
+}
+.pdf-flat [class*="shadow"] {
+  box-shadow: none !important;
+}
+
 /* ---- Impressão / PDF: dimensionamento profissional da folha ---- */
 @media print {
   @page {
