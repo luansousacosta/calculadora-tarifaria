@@ -95,7 +95,7 @@ export default function Calculadora() {
   const [consumo, setConsumo] = useState("910");
   const [ligacao, setLigacao] = useState("MONO");
   const [bandeira, setBandeira] = useState("VERDE");
-  const [cip, setCip] = useState("112.04"); // Iluminação Pública (varia por município)
+  const [cip, setCip] = useState("0"); // Iluminação Pública (varia por município — preencher)
   const [cliente, setCliente] = useState("");
   const [cidade, setCidade] = useState("");
 
