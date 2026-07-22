@@ -852,7 +852,7 @@ function Proposta({ r, lead, hoje, validade, propostaUrl, pdfMode, enviada, onVo
               <p className="text-xs font-semibold uppercase tracking-wide text-royal-400">
                 Investimento
               </p>
-              <p className="mt-1 break-words font-display text-2xl font-extrabold leading-tight tabular-nums text-royal-900">
+              <p className="mt-1 whitespace-nowrap font-display text-xl font-extrabold leading-tight tabular-nums text-royal-900">
                 {brl(r.solar.investimento)}
               </p>
               <p className="text-xs text-royal-400">sistema de {r.kwp.toFixed(1)} kWp</p>
@@ -861,7 +861,7 @@ function Proposta({ r, lead, hoje, validade, propostaUrl, pdfMode, enviada, onVo
               <p className="text-xs font-semibold uppercase tracking-wide text-brand-300">
                 Você economiza (25 anos)
               </p>
-              <p className="mt-1 break-words font-display text-2xl font-extrabold leading-tight tabular-nums text-brand-400">
+              <p className="mt-1 whitespace-nowrap font-display text-xl font-extrabold leading-tight tabular-nums text-brand-400">
                 {brl(economia25Solar)}
               </p>
               <p className="text-xs text-royal-300">{brl(r.solar.economiaMes)}/mês</p>
@@ -870,7 +870,7 @@ function Proposta({ r, lead, hoje, validade, propostaUrl, pdfMode, enviada, onVo
               <p className="text-xs font-semibold uppercase tracking-wide text-royal-400">
                 Retorno
               </p>
-              <p className="mt-1 break-words font-display text-2xl font-extrabold leading-tight tabular-nums text-royal-900">
+              <p className="mt-1 whitespace-nowrap font-display text-xl font-extrabold leading-tight tabular-nums text-royal-900">
                 {paybackTxt(r.solar.paybackAnos)}
               </p>
               <p className="text-xs text-royal-400">e energia por +25 anos</p>
