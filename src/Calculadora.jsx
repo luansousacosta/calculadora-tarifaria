@@ -58,7 +58,7 @@ const PRECO_FV = [
   [150, 2.21],
   [300, 2.2],
 ];
-const HIBRIDO_MULT = 1.5; // solar + bateria = +50% sobre o solar
+const HIBRIDO_MULT = 1.85; // solar + bateria = +85% sobre o solar
 
 /* ------------------------------------------------------------------ */
 const brl = (v) =>
@@ -456,7 +456,7 @@ export default function Calculadora() {
               Estimativa com base nas tarifas da Neoenergia Cosern — B1 Residencial (fatura 06/2026,
               com tributos): tarifa cheia {brl(TARIFA_CHEIA)}/kWh, Fio B não compensado{" "}
               {brl(FIO_B)}/kWh, CIP {brl(PREMISSAS.cip)}/mês. Preços de sistemas: Pesquisa SED Greener
-              (jan/2026); híbrido = solar + 50%. No solar/híbrido considera-se autoconsumo instantâneo
+              (jan/2026); híbrido = solar + 85%. No solar/híbrido considera-se autoconsumo instantâneo
               (não paga Fio B) e o restante compensado (paga Fio B, regra da Lei 14.300/2022); paga-se
               sempre o maior entre o Fio B e o custo de disponibilidade, mais a CIP. A assinatura é
               geração remota (100% compensado) com desconto garantido sobre o economizável. Valores

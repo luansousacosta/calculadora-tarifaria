@@ -5,7 +5,7 @@ gera um relatório de economia:
 
 - **Solar próprio** — estima potência (kWp), investimento e retorno (payback).
 - **Solar + bateria (híbrido)** — mesma base, com backup e maior autoconsumo
-  (investimento = solar + 50%).
+  (investimento = solar + 85%).
 - **Assinatura de energia** — sem investir, desconto garantido sobre o
   economizável.
 
