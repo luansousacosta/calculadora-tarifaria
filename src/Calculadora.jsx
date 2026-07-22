@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Sun,
@@ -84,13 +84,6 @@ const N8N_WEBHOOK =
 const MODULO_W = 620; // potência do módulo p/ estimar nº de placas
 const VALIDADE_DIAS = 15;
 
-// Cenários que podem virar proposta
-const CENARIOS = {
-  SOLAR: { nome: "Energia Solar", temSistema: true, temInvest: true, bateria: false },
-  HIBRIDO: { nome: "Solar + Bateria", temSistema: true, temInvest: true, bateria: true },
-  ASSINATURA: { nome: "Assinatura de Energia", temSistema: false, temInvest: false, bateria: false },
-};
-
 const so = (v) => String(v || "").replace(/\D/g, ""); // só dígitos
 const waLink = (msg) =>
   `https://wa.me/${EMPRESA.whatsapp}?text=${encodeURIComponent(msg)}`;
@@ -139,7 +132,29 @@ export default function Calculadora() {
   const [endereco, setEndereco] = useState("");
   const [cidade, setCidade] = useState("");
   const [showProposta, setShowProposta] = useState(false);
-  const [cenarioProposta, setCenarioProposta] = useState("SOLAR");
+
+  // Pré-preenchimento por URL (ex.: link gerado pela IA do WhatsApp).
+  // Ex.: ?consumo=910&cip=40&nome=Fulano&whatsapp=5584...&email=..&proposta=1
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const q = new URLSearchParams(window.location.search);
+    const set = (k, fn) => {
+      const v = q.get(k);
+      if (v != null && v !== "") fn(v);
+    };
+    set("consumo", setConsumo);
+    set("cip", setCip);
+    set("nome", setCliente);
+    set("whatsapp", setWhatsapp);
+    set("email", setEmail);
+    set("endereco", setEndereco);
+    set("cidade", setCidade);
+    const lig = q.get("ligacao");
+    if (lig && LIGACOES[lig]) setLigacao(lig);
+    const ban = q.get("bandeira");
+    if (ban && BANDEIRAS[ban]) setBandeira(ban);
+    if (q.get("proposta") === "1" || q.get("auto") === "1") setShowProposta(true);
+  }, []);
 
   // Ajustes avançados (editáveis)
   const [geracao, setGeracao] = useState("130"); // kWh/kWp/mês (RN)
@@ -223,12 +238,14 @@ export default function Calculadora() {
     return d.toLocaleDateString("pt-BR");
   }, []);
 
-  const dadosCenario =
-    cenarioProposta === "ASSINATURA"
-      ? r.assinatura
-      : cenarioProposta === "HIBRIDO"
-      ? r.hibrido
-      : r.solar;
+  // Validação dos campos de captura (obrigatórios para gerar a proposta)
+  const emailOk = /\S+@\S+\.\S+/.test(email.trim());
+  const faltando = [];
+  if (!(r.C > 0)) faltando.push("consumo");
+  if (!cliente.trim()) faltando.push("nome");
+  if (so(whatsapp).length < 10) faltando.push("WhatsApp");
+  if (!emailOk) faltando.push("e-mail");
+  const podeGerar = faltando.length === 0;
 
   // Captação do lead (best-effort para o fluxo n8n → Reonic)
   const enviarLead = () => {
@@ -237,13 +254,15 @@ export default function Calculadora() {
       telefone: so(whatsapp),
       email,
       endereco: [endereco, cidade].filter(Boolean).join(" - "),
-      interesse: `Energia solar — ${CENARIOS[cenarioProposta].nome}`,
-      cenario: CENARIOS[cenarioProposta].nome,
+      interesse: "Energia solar (calculadora — 3 cenários)",
       consumoKwh: r.C,
       contaAtual: Number(r.contaCheia.toFixed(2)),
       sistemaKwp: Number(r.kwp.toFixed(2)),
-      economiaMes: Number((dadosCenario.economiaMes || 0).toFixed(2)),
-      investimento: Number((dadosCenario.investimento || 0).toFixed(2)),
+      economiaSolarMes: Number(r.solar.economiaMes.toFixed(2)),
+      investimentoSolar: Number(r.solar.investimento.toFixed(2)),
+      economiaHibridoMes: Number(r.hibrido.economiaMes.toFixed(2)),
+      investimentoHibrido: Number(r.hibrido.investimento.toFixed(2)),
+      economiaAssinaturaMes: Number(r.assinatura.economiaMes.toFixed(2)),
       origem: "calculadora-solar",
       consentimentoLGPD: true,
       paginaUrl: typeof window !== "undefined" ? window.location.href : "",
@@ -271,8 +290,6 @@ export default function Calculadora() {
     return (
       <Proposta
         r={r}
-        cenario={cenarioProposta}
-        dados={dadosCenario}
         lead={{ cliente, whatsapp, email, endereco, cidade }}
         hoje={hoje}
         validade={validade}
@@ -593,41 +610,22 @@ export default function Calculadora() {
             Receba a proposta com o seu nome
           </h3>
           <p className="mt-1 text-sm text-royal-600">
-            Escolha o cenário, preencha seus dados e gere uma proposta em PDF.
+            Preencha seus dados para gerar a proposta com as 3 opções (solar, solar + bateria e
+            assinatura) e falar com um especialista. Campos obrigatórios: nome, WhatsApp e e-mail.
           </p>
 
-          <div className="mt-5">
-            <Field label="Cenário da proposta">
-              <div className="grid grid-cols-3 gap-2">
-                {Object.keys(CENARIOS).map((k) => (
-                  <button
-                    key={k}
-                    onClick={() => setCenarioProposta(k)}
-                    className={`rounded-xl border px-2 py-2.5 text-xs font-semibold transition sm:text-sm ${
-                      cenarioProposta === k
-                        ? "border-royal-600 bg-royal-600 text-white"
-                        : "border-royal-200 bg-white text-royal-600 hover:border-royal-300"
-                    }`}
-                  >
-                    {CENARIOS[k].nome}
-                  </button>
-                ))}
-              </div>
-            </Field>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Nome completo">
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <Field label="Nome completo *">
               <Input value={cliente} onChange={(e) => setCliente(e.target.value)} placeholder="Seu nome" />
             </Field>
-            <Field label="WhatsApp">
+            <Field label="WhatsApp *">
               <Input
                 value={whatsapp}
                 onChange={(e) => setWhatsapp(e.target.value)}
                 placeholder="(84) 9 9999-9999"
               />
             </Field>
-            <Field label="E-mail">
+            <Field label="E-mail *">
               <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@email.com" />
             </Field>
             <Field label="Endereço">
@@ -645,7 +643,7 @@ export default function Calculadora() {
           <div className="mt-2 flex flex-col gap-3 sm:flex-row">
             <button
               onClick={gerarProposta}
-              disabled={!(r.C > 0) || !cliente.trim()}
+              disabled={!podeGerar}
               className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-royal-600 px-5 py-3.5 font-bold text-white shadow-lg shadow-royal-600/25 transition hover:bg-royal-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <FileText className="h-5 w-5" /> Gerar proposta
@@ -663,6 +661,11 @@ export default function Calculadora() {
               <MessageCircle className="h-5 w-5" /> Falar no WhatsApp
             </a>
           </div>
+          {!podeGerar && (
+            <p className="mt-2 text-xs font-medium text-royal-500">
+              Para gerar a proposta, preencha: {faltando.join(", ")}.
+            </p>
+          )}
           <p className="mt-2 text-xs text-royal-400">
             Ao continuar você concorda em ser contatado pela Sousa Costa Energia sobre esta
             simulação (LGPD).
@@ -686,13 +689,35 @@ function paybackTxt(anos) {
 /* ================================================================== *
  *  PROPOSTA — documento imprimível / PDF
  * ================================================================== */
-function Proposta({ r, cenario, dados, lead, hoje, validade, onVoltar }) {
-  const meta = CENARIOS[cenario] || CENARIOS.SOLAR;
-  const s = dados;
+function Proposta({ r, lead, hoje, validade, onVoltar }) {
   const modulos = Math.max(1, Math.ceil((r.kwp * 1000) / MODULO_W));
   const geracaoAno = r.C * 12; // sistema dimensionado para o consumo
-  const invest = s.investimento || 0;
-  const economia25 = s.economiaAno * 25 - invest;
+  const opcoes = [
+    {
+      nome: "Solar próprio",
+      d: r.solar,
+      invest: r.solar.investimento,
+      sistema: true,
+      destaque: true,
+      tag: `${r.kwp.toFixed(1)} kWp`,
+    },
+    {
+      nome: "Solar + bateria",
+      d: r.hibrido,
+      invest: r.hibrido.investimento,
+      sistema: true,
+      destaque: false,
+      tag: "com backup",
+    },
+    {
+      nome: "Assinatura",
+      d: r.assinatura,
+      invest: 0,
+      sistema: false,
+      destaque: false,
+      tag: "sem investir",
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-royal-50 font-sans text-royal-950 print:bg-white">
@@ -716,7 +741,7 @@ function Proposta({ r, cenario, dados, lead, hoje, validade, onVoltar }) {
 
       <div className="mx-auto max-w-4xl space-y-6 p-4 sm:p-8 print:max-w-none print:space-y-5 print:p-0">
         {/* CAPA */}
-        <section className="break-inside-avoid rounded-2xl bg-gradient-to-br from-royal-700 to-royal-900 p-8 text-white shadow-card print:rounded-none">
+        <section className="avoid-break break-inside-avoid rounded-2xl bg-gradient-to-br from-royal-700 to-royal-900 p-8 text-white shadow-card print:rounded-none">
           <div className="flex items-center gap-3">
             <svg viewBox="0 0 100 100" className="h-11 w-11" aria-hidden="true">
               <rect width="100" height="100" rx="24" fill="#ffffff" />
@@ -732,7 +757,7 @@ function Proposta({ r, cenario, dados, lead, hoje, validade, onVoltar }) {
           </div>
 
           <p className="mt-8 text-sm font-semibold uppercase tracking-widest text-brand-300">
-            Proposta · {meta.nome}
+            Proposta de energia solar
           </p>
           <h1 className="mt-1 font-display text-3xl font-extrabold sm:text-4xl">
             {lead.cliente || "Cliente"}
@@ -745,105 +770,112 @@ function Proposta({ r, cenario, dados, lead, hoje, validade, onVoltar }) {
             <CapaItem k="Emitida em" v={hoje} />
             <CapaItem k="Válida até" v={validade} />
             <CapaItem k="Consumo" v={`${r.C.toLocaleString("pt-BR")} kWh/mês`} />
-            <CapaItem
-              k={meta.temSistema ? "Sistema" : "Modelo"}
-              v={meta.temSistema ? `${r.kwp.toFixed(1)} kWp` : "Sem instalação"}
-            />
+            <CapaItem k="Conta hoje" v={brl(r.contaCheia)} />
           </div>
         </section>
 
-        {/* DESTAQUE ECONOMIA */}
-        <section className="grid gap-4 sm:grid-cols-3">
-          <BigStat titulo="Economia por mês" valor={brl(s.economiaMes)} destaque />
-          <BigStat titulo="Economia por ano" valor={brl(s.economiaAno)} />
-          <BigStat titulo="Economia em 25 anos" valor={brl(economia25)} />
-        </section>
-
-        {/* SUA CONTA */}
-        <section className="break-inside-avoid rounded-2xl border border-royal-100 bg-white p-6 shadow-card">
-          <h2 className="font-display text-lg font-bold text-royal-900">Sua conta de luz</h2>
-          <div className="mt-4 grid gap-4 sm:grid-cols-3">
-            <ContaBox titulo="Hoje (sem solar)" valor={brl(r.contaCheia)} tom="cinza" />
-            <ContaBox titulo="Com energia solar" valor={brl(s.contaFinal)} tom="verde" />
-            <ContaBox titulo="Desconto na conta" valor={pct(s.descontoPct)} tom="indigo" />
+        {/* 3 OPÇÕES */}
+        <section className="avoid-break break-inside-avoid">
+          <h2 className="mb-1 font-display text-xl font-bold text-royal-950">Suas 3 opções</h2>
+          <p className="mb-4 text-sm text-royal-500">
+            Escolha o caminho que faz mais sentido para você — todos reduzem a sua conta de luz.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {opcoes.map((o) => (
+              <OpcaoCard key={o.nome} o={o} />
+            ))}
           </div>
         </section>
 
-        {/* SISTEMA (solar / híbrido) */}
-        {meta.temSistema && (
-          <section className="avoid-break break-inside-avoid rounded-2xl border border-royal-100 bg-white p-6 shadow-card">
-            <h2 className="font-display text-lg font-bold text-royal-900">
-              Seu sistema fotovoltaico
-            </h2>
-            <div className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2">
-              <LinhaSpec k="Potência estimada" v={`${r.kwp.toFixed(1)} kWp`} />
-              <LinhaSpec k="Geração estimada" v={`${geracaoAno.toLocaleString("pt-BR")} kWh/ano`} />
-              <LinhaSpec k="Módulos (aprox.)" v={`${modulos} × ${MODULO_W} W`} />
-              <LinhaSpec k="Inversor" v={`~${Math.max(1, Math.round(r.kwp))} kW`} />
-              {meta.bateria && (
-                <LinhaSpec k="Armazenamento" v="Bateria (backup) inclusa" />
-              )}
-            </div>
-            <p className="mt-4 text-xs text-royal-400">
-              Quantidades e modelos são estimativas dimensionadas pelo consumo informado. A
-              configuração final é definida em visita técnica.
-            </p>
-          </section>
-        )}
+        {/* SISTEMA */}
+        <section className="avoid-break break-inside-avoid rounded-2xl border border-royal-100 bg-white p-6 shadow-card">
+          <h2 className="font-display text-lg font-bold text-royal-900">
+            Seu sistema fotovoltaico
+          </h2>
+          <p className="mb-4 mt-0.5 text-xs text-royal-400">
+            Estimativa para as opções <strong>Solar</strong> e <strong>Solar + bateria</strong> (na
+            Assinatura não há instalação).
+          </p>
+          <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+            <LinhaSpec k="Potência estimada" v={`${r.kwp.toFixed(1)} kWp`} />
+            <LinhaSpec k="Geração estimada" v={`${geracaoAno.toLocaleString("pt-BR")} kWh/ano`} />
+            <LinhaSpec k="Módulos (aprox.)" v={`${modulos} × ${MODULO_W} W`} />
+            <LinhaSpec k="Inversor" v={`~${Math.max(1, Math.round(r.kwp))} kW`} />
+          </div>
+          <p className="mt-4 text-xs text-royal-400">
+            Quantidades e modelos são estimativas dimensionadas pelo consumo informado. A
+            configuração final é definida em visita técnica.
+          </p>
+        </section>
 
-        {/* INVESTIMENTO (solar / híbrido) */}
-        {meta.temInvest ? (
-          <section className="avoid-break break-inside-avoid rounded-2xl border border-royal-100 bg-white p-6 shadow-card">
-            <h2 className="font-display text-lg font-bold text-royal-900">Investimento e retorno</h2>
-            <div className="mt-4 grid gap-4 sm:grid-cols-3">
-              <ContaBox titulo="Investimento" valor={brl(invest)} tom="indigo" />
-              <ContaBox titulo="Retorno (payback)" valor={paybackTxt(s.paybackAnos)} tom="cinza" />
-              <ContaBox
-                titulo="Retorno ao ano"
-                valor={invest > 0 ? pct(s.economiaAno / invest) : "—"}
-                tom="verde"
-              />
-            </div>
-            <ul className="mt-5 space-y-2 text-sm text-royal-600">
-              {[
-                "Redução imediata na conta de luz já nas primeiras faturas",
-                meta.bateria
-                  ? "Energia de reserva (backup) na falta de luz"
-                  : "Valorização do imóvel e energia limpa por mais de 25 anos",
-                "Projeto, instalação e homologação junto à Neoenergia Cosern",
-              ].map((t) => (
-                <li key={t} className="flex items-start gap-2">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" /> {t}
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : (
-          <section className="avoid-break break-inside-avoid rounded-2xl border border-royal-100 bg-white p-6 shadow-card">
-            <h2 className="font-display text-lg font-bold text-royal-900">
-              Como funciona a assinatura
-            </h2>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <ContaBox titulo="Investimento" valor="Sem investir" tom="indigo" />
-              <ContaBox titulo="Início da economia" valor="Imediato" tom="verde" />
-            </div>
-            <ul className="mt-5 space-y-2 text-sm text-royal-600">
-              {[
-                "Desconto garantido na conta todo mês, mesmo sem gerar",
-                "Sem obras, sem equipamentos e sem instalar nada",
-                "Energia limpa de uma usina da Sousa Costa Energia",
-                "Sem fidelidade de longo prazo — cancele quando quiser",
-              ].map((t) => (
-                <li key={t} className="flex items-start gap-2">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" /> {t}
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
+        {/* COMPARATIVO */}
+        <section className="avoid-break break-inside-avoid rounded-2xl border border-royal-100 bg-white p-6 shadow-card">
+          <h2 className="mb-4 font-display text-lg font-bold text-royal-900">Comparativo</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[560px] border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-royal-100 text-left text-royal-400">
+                  <th className="py-2 pr-3 font-semibold">Indicador</th>
+                  <th className="py-2 px-3 text-right font-semibold">Conta hoje</th>
+                  <th className="py-2 px-3 text-right font-semibold text-brand-700">Solar</th>
+                  <th className="py-2 px-3 text-right font-semibold">Solar + bateria</th>
+                  <th className="py-2 pl-3 text-right font-semibold">Assinatura</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-royal-50">
+                <TR
+                  label="Conta mensal"
+                  hoje={brl(r.contaCheia)}
+                  solar={brl(r.solar.contaFinal)}
+                  hibrido={brl(r.hibrido.contaFinal)}
+                  assinatura={brl(r.assinatura.contaFinal)}
+                />
+                <TR
+                  label="Economia por mês"
+                  solar={brl(r.solar.economiaMes)}
+                  hibrido={brl(r.hibrido.economiaMes)}
+                  assinatura={brl(r.assinatura.economiaMes)}
+                  accent
+                />
+                <TR
+                  label="Economia por ano"
+                  solar={brl(r.solar.economiaAno)}
+                  hibrido={brl(r.hibrido.economiaAno)}
+                  assinatura={brl(r.assinatura.economiaAno)}
+                  accent
+                />
+                <TR
+                  label="Desconto na conta"
+                  solar={pct(r.solar.descontoPct)}
+                  hibrido={pct(r.hibrido.descontoPct)}
+                  assinatura={pct(r.assinatura.descontoPct)}
+                />
+                <TR
+                  label="Investimento"
+                  solar={brl(r.solar.investimento)}
+                  hibrido={brl(r.hibrido.investimento)}
+                  assinatura="—"
+                />
+                <TR
+                  label="Retorno (payback)"
+                  solar={paybackTxt(r.solar.paybackAnos)}
+                  hibrido={paybackTxt(r.hibrido.paybackAnos)}
+                  assinatura="Imediato"
+                />
+                <TR
+                  label="Economia em 25 anos"
+                  solar={brl(r.solar.economiaAno * 25 - r.solar.investimento)}
+                  hibrido={brl(r.hibrido.economiaAno * 25 - r.hibrido.investimento)}
+                  assinatura={brl(r.assinatura.economiaAno * 25)}
+                  accent
+                />
+              </tbody>
+            </table>
+          </div>
+        </section>
 
         {/* CONTATO */}
-        <section className="break-inside-avoid rounded-2xl bg-royal-900 p-6 text-white shadow-card print:rounded-none">
+        <section className="avoid-break break-inside-avoid rounded-2xl bg-royal-900 p-6 text-white shadow-card print:rounded-none">
           <h2 className="font-display text-lg font-bold">Vamos conversar?</h2>
           <p className="mt-1 text-sm text-royal-200">
             Fale com um especialista e garanta sua condição. Proposta válida até {validade}.
@@ -855,8 +887,8 @@ function Proposta({ r, cenario, dados, lead, hoje, validade, onVoltar }) {
           </div>
           <a
             href={waLink(
-              `Olá! Sou ${lead.cliente || "cliente"} e recebi a proposta (${meta.nome} · ` +
-                `economia ${brl(s.economiaMes)}/mês). Quero avançar!`
+              `Olá! Sou ${lead.cliente || "cliente"} e recebi a proposta de energia solar ` +
+                `(consumo ${r.C} kWh/mês). Quero avançar!`
             )}
             target="_blank"
             rel="noreferrer"
@@ -872,6 +904,33 @@ function Proposta({ r, cenario, dados, lead, hoje, validade, onVoltar }) {
           reajustes da ANEEL.
         </p>
       </div>
+    </div>
+  );
+}
+
+function OpcaoCard({ o }) {
+  return (
+    <div
+      className={`avoid-break break-inside-avoid flex flex-col rounded-2xl border p-5 shadow-card ${
+        o.destaque ? "border-brand-500 bg-brand-500/5" : "border-royal-100 bg-white"
+      }`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <p className="font-display font-bold text-royal-950">{o.nome}</p>
+        <span className="rounded-full bg-royal-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-royal-600">
+          {o.tag}
+        </span>
+      </div>
+      <p className="mt-3 font-display text-2xl font-extrabold text-brand-600">
+        {brl(o.d.economiaMes)}
+        <span className="text-sm font-semibold text-royal-400">/mês</span>
+      </p>
+      <p className="text-xs text-royal-500">{pct(o.d.descontoPct)} de desconto</p>
+      <dl className="mt-3 space-y-1.5 border-t border-royal-100 pt-3 text-sm">
+        <Row label="Conta final" value={brl(o.d.contaFinal)} />
+        <Row label="Investimento" value={o.invest > 0 ? brl(o.invest) : "Sem investir"} />
+        <Row label="Retorno" value={o.sistema ? paybackTxt(o.d.paybackAnos) : "Imediato"} strong />
+      </dl>
     </div>
   );
 }
