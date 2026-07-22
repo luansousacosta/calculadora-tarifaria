@@ -319,20 +319,12 @@ export default function Calculadora() {
               Sousa Costa <span className="text-brand-600">Energia</span>
             </span>
           </a>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => window.print()}
-              className="inline-flex items-center gap-1.5 rounded-full bg-royal-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-royal-700"
-            >
-              <Printer className="h-4 w-4" /> Relatório
-            </button>
-            <a
-              href="https://www.sousacosta.com.br/"
-              className="inline-flex items-center gap-1.5 rounded-full border border-royal-200 px-4 py-2 text-sm font-semibold text-royal-700 transition hover:bg-royal-50"
-            >
-              <ArrowLeft className="h-4 w-4" /> Site
-            </a>
-          </div>
+          <a
+            href="https://www.sousacosta.com.br/"
+            className="inline-flex items-center gap-1.5 rounded-full border border-royal-200 px-4 py-2 text-sm font-semibold text-royal-700 transition hover:bg-royal-50"
+          >
+            <ArrowLeft className="h-4 w-4" /> Site
+          </a>
         </div>
       </header>
 
@@ -502,22 +494,14 @@ export default function Calculadora() {
 
         {/* Relatório / comparativo */}
         <div className="mt-12 rounded-2xl border border-royal-100 bg-white p-6 shadow-card sm:p-8">
-          <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-brand-700">
-                Relatório de economia
-              </p>
-              <h3 className="mt-1 font-display text-xl font-bold text-royal-950">
-                {cliente ? `Cliente: ${cliente}` : "Comparativo de cenários"}
-                {cidade ? ` · ${cidade}` : ""}
-              </h3>
-            </div>
-            <button
-              onClick={() => window.print()}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-royal-200 px-3 py-2 text-sm font-semibold text-royal-600 transition hover:bg-royal-50 print:hidden"
-            >
-              <Printer className="h-4 w-4" /> Imprimir / PDF
-            </button>
+          <div className="mb-5">
+            <p className="text-xs font-bold uppercase tracking-widest text-brand-700">
+              Relatório de economia
+            </p>
+            <h3 className="mt-1 font-display text-xl font-bold text-royal-950">
+              {cliente ? `Cliente: ${cliente}` : "Comparativo de cenários"}
+              {cidade ? ` · ${cidade}` : ""}
+            </h3>
           </div>
 
           <div className="overflow-x-auto">
@@ -734,7 +718,7 @@ function Proposta({ r, lead, hoje, validade, onVoltar }) {
             onClick={() => window.print()}
             className="inline-flex items-center gap-1.5 rounded-full bg-royal-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-royal-700"
           >
-            <Printer className="h-4 w-4" /> Baixar / Imprimir PDF
+            <Printer className="h-4 w-4" /> Gerar PDF
           </button>
         </div>
       </div>
