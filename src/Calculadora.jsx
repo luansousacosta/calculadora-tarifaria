@@ -49,9 +49,9 @@ const BANDEIRAS = {
 
 // Disponibilidade mínima por tipo de ligação (kWh)
 const LIGACOES = {
-  MONO: { label: "Monofásico (30 kWh)", kwh: 30 },
-  BI: { label: "Bifásico (50 kWh)", kwh: 50 },
-  TRI: { label: "Trifásico (100 kWh)", kwh: 100 },
+  MONO: { label: "Monofásico", kwh: 30 },
+  BI: { label: "Bifásico", kwh: 50 },
+  TRI: { label: "Trifásico", kwh: 100 },
 };
 
 // Preço médio de sistemas FV — Pesquisa SED Greener (jan/2026), telhado.
@@ -394,11 +394,14 @@ export default function Calculadora() {
 
         {/* Entradas */}
         <div className="mt-8 grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2">
+          <div className={r.C > 0 ? "lg:col-span-2" : "lg:col-span-3"}>
             <Card>
-              <CardTitle icon={Zap}>Dados do cliente</CardTitle>
+              <CardTitle icon={Zap}>Dados de consumo</CardTitle>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Consumo mensal (kWh)">
+                <Field
+                  label="Consumo mensal (kWh)"
+                  hint="Veja na sua conta de luz, no gráfico de “Histórico de consumo” (em kWh). Pode usar a média dos últimos meses."
+                >
                   <Input
                     value={consumo}
                     onChange={(e) => setConsumo(e.target.value)}
@@ -477,6 +480,7 @@ export default function Calculadora() {
           </div>
 
           {/* Conta hoje */}
+          {r.C > 0 && (
           <div>
             <div className="rounded-2xl bg-gradient-to-br from-royal-700 to-royal-900 p-6 text-white shadow-card">
               <div className="flex items-center gap-2 text-brand-300">
@@ -492,8 +496,11 @@ export default function Calculadora() {
               </dl>
             </div>
           </div>
+          )}
         </div>
 
+        {r.C > 0 ? (
+          <>
         {/* Cenários */}
         <h2 className="mt-12 font-display text-2xl font-extrabold text-royal-950">
           Compare os cenários
@@ -628,6 +635,20 @@ export default function Calculadora() {
             </p>
           </div>
         </div>
+          </>
+        ) : (
+          <div className="mt-10 rounded-2xl border border-dashed border-royal-300 bg-white/70 p-10 text-center shadow-card">
+            <Sun className="mx-auto h-9 w-9 text-brand-500" />
+            <h3 className="mt-3 font-display text-xl font-bold text-royal-950">
+              Informe seu consumo para ver os cenários
+            </h3>
+            <p className="mx-auto mt-1 max-w-md text-sm text-royal-500">
+              Preencha o <strong>consumo mensal (kWh)</strong> acima e a calculadora abre a
+              comparação entre <strong>Solar</strong>, <strong>Solar + bateria</strong> e{" "}
+              <strong>Assinatura</strong>, com a economia estimada de cada opção.
+            </p>
+          </div>
+        )}
 
         {/* CTA — Gerar proposta */}
         <div className="mt-12 overflow-hidden rounded-2xl border border-brand-500/40 bg-gradient-to-br from-brand-500/10 to-royal-50 p-6 shadow-card sm:p-8">
